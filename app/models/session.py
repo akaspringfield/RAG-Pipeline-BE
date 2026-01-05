@@ -1,0 +1,19 @@
+import uuid
+from datetime import datetime
+from app.extensions import db
+
+class ClientSession(db.Model):
+    __tablename__ = "client_sessions"
+
+    uuid = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_uuid = db.Column(db.UUID, nullable=False)
+
+    refresh_token_hash = db.Column(db.Text, nullable=False)
+    device_info = db.Column(db.String(255))
+    ip_address = db.Column(db.String(50))
+
+    is_revoked = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
