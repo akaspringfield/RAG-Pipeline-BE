@@ -1,0 +1,123 @@
+🏗️ Production Architecture (Flask AI RAG System)
+
+High-Level Flow
+                    ┌──────────────────────────────┐
+                    │        Client (Web / App)    │
+                    └──────────────┬───────────────┘
+                                   │ HTTPS
+                                   ▼
+                    ┌──────────────────────────────┐
+                    │        Nginx / Load Balancer │
+                    └──────────────┬───────────────┘
+                                   │
+                                   ▼
+        ┌────────────────────────────────────────────────┐
+        │              Flask API (Gunicorn)             │
+        │              Backend Application              │
+        └────────────────────────────────────────────────┘
+                │            │              │
+                │            │              │
+                ▼            ▼              ▼
+     ┌──────────────┐ ┌────────────┐ ┌───────────────┐
+     │ JWT Auth     │ │ RBAC/ACL   │ │ Chat Service  │
+     │ Middleware   │ │ Middleware  │ │ (RAG Layer)   │
+     └─────┬────────┘ └─────┬──────┘ └──────┬────────┘
+           │                │                │
+           ▼                ▼                ▼
+   ┌──────────────────────────────────────────────────┐
+   │                 Service Layer                    │
+   │  - user_service                                  │
+   │  - chat_service                                  │
+   │  - rbac_service                                  │
+   │  - ai_service (RAG Orchestrator)                │
+   └──────────────────────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+┌──────────────┐ ┌──────────────┐ ┌─────────────────┐
+│ PostgreSQL   │ │ Redis Cache  │ │ AI Provider API │
+│ (Primary DB) │ │ (Sessions,   │ │ (LLM / RAG)     │
+│              │ │ ACL cache)    │ │ OpenAI/Local    │
+└──────────────┘ └──────────────┘ └─────────────────┘
+        │
+        ▼
+┌─────────────────────────────┐
+│ RBAC Tables                │
+│ - client_list             │
+│ - client_roles            │
+│ - client_acl              │
+│ - client_role_mapping     │
+└─────────────────────────────┘
+
+
+Security Layer Flow
+
+Request
+  │
+  ▼
+JWT Validation
+  │
+  ▼
+User Identity Extraction
+  │
+  ▼
+RBAC Middleware (has_access)
+  │
+  ├── ❌ DENY → 403 Forbidden
+  │
+  └── ✅ ALLOW
+          │
+          ▼
+     Business Logic
+
+🧩 Deployment Architecture (Production)
+
+
+                 ┌────────────────────┐
+                 │     GitHub / CI    │
+                 └─────────┬──────────┘
+                           ▼
+                 ┌────────────────────┐
+                 │   Docker Build     │
+                 └─────────┬──────────┘
+                           ▼
+        ┌────────────────────────────────────┐
+        │        Docker Containers           │
+        │                                    │
+        │  - flask-api (gunicorn)           │
+        │  - postgres                       │
+        │  - redis                          │
+        │  - nginx                          │
+        └────────────────────────────────────┘
+                           │
+                           ▼
+                  Cloud / VPS / Kubernetes
+
+
+Tech Responsibilities Map
+Layer	Tech
+API Layer	Flask + Gunicorn
+Auth	JWT
+RBAC	DB + Middleware
+Cache	Redis
+DB	PostgreSQL
+AI	External LLM / RAG engine
+Reverse Proxy	Nginx
+Deployment	Docker
+
+🚀 Key Design Highlights
+✔ RBAC is DB-driven
+
+No hardcoded permissions
+
+✔ AI layer is isolated
+
+Chat service never talks directly to DB logic
+
+✔ Stateless backend
+
+JWT + Redis optional session caching
+
+✔ Scalable
+
+Can move to Kubernetes easily

@@ -1,0 +1,57 @@
+FINAL ARCHITECTURE (after all steps)
+User Request
+   ↓
+Rate Limit (Redis)
+   ↓
+Cache Check (Redis)
+   ↓
+Quota Check (DB)
+   ↓
+AI Call (retry enabled)
+   ↓
+Cache Store (Redis)
+   ↓
+Response
+
+Project is a real production backend level:
+
+✔ caching system
+✔ retry system
+✔ rate limiting
+✔ proper token counting
+✔ scalable AI gateway
+
+flask db migrate -m "added role & acl tables"
+flask db upgrade
+
+DOCKER SETUP
+🧠 1. FIRST TIME SETUP INSIDE DOCKER
+
+We will run migrations automatically.
+
+Add this to create_app() OR run manually:
+
+Option A (recommended manual init once):
+
+After containers start:
+
+docker exec -it flask_backend bash
+flask db upgrade
+python setup_db.py
+
+
+🚀 2. ONE COMMAND DEPLOYMENT
+
+From project root:
+
+docker-compose up --build
+
+Done.
+
+🌐 3. API URLs
+
+After running:
+
+Backend → http://localhost:5000
+Postgres → localhost:5432
+Redis → localhost:6379
