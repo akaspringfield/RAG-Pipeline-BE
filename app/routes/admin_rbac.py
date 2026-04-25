@@ -1,5 +1,6 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.middleware.protected import protected
 
 from app.services.rbac_service import (
     create_role,
@@ -18,7 +19,7 @@ admin_rbac_bp = Blueprint("admin_rbac", __name__)
 # ---------------- ROLE APIs ----------------
 
 @admin_rbac_bp.route("/roles", methods=["POST"])
-@jwt_required()
+@protected("USER_READ")
 def add_role():
     data = request.get_json()
 
@@ -28,7 +29,7 @@ def add_role():
 
 
 @admin_rbac_bp.route("/roles", methods=["GET"])
-@jwt_required()
+@protected("USER_READ")
 def get_roles():
     roles = list_roles()
     return success_response(roles, "Roles fetched")
@@ -37,7 +38,7 @@ def get_roles():
 # ---------------- ACL APIs ----------------
 
 @admin_rbac_bp.route("/acl", methods=["POST"])
-@jwt_required()
+@protected("USER_READ")
 def add_acl():
     data = request.get_json()
 
@@ -47,7 +48,7 @@ def add_acl():
 
 
 @admin_rbac_bp.route("/acl", methods=["GET"])
-@jwt_required()
+@protected("USER_READ")
 def get_acl():
     acls = list_acls()
     return success_response(acls, "ACLs fetched")
@@ -56,7 +57,7 @@ def get_acl():
 # ---------------- ROLE ↔ ACL MAPPING ----------------
 
 @admin_rbac_bp.route("/role/<role_id>/acl", methods=["POST"])
-@jwt_required()
+@protected("USER_READ")
 def map_acl(role_id):
     data = request.get_json()
 
@@ -66,7 +67,7 @@ def map_acl(role_id):
 
 
 @admin_rbac_bp.route("/role/<role_id>/acl", methods=["GET"])
-@jwt_required()
+@protected("USER_READ")
 def role_acl(role_id):
     data = get_role_acls(role_id)
 

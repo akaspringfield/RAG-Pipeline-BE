@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.middleware.protected import protected
 
 from app.services.chat_service import create_chat, send_message
 from app.utils.response import success_response, error_response
@@ -15,7 +16,7 @@ chat_bp = Blueprint("chat", __name__)
 
 # ---------------- CREATE CHAT ----------------
 @chat_bp.route("/create", methods=["POST"])
-@jwt_required()
+@protected("USER_READ")
 def create():
     client_uuid = get_jwt_identity()
     data = request.json
@@ -30,7 +31,7 @@ def create():
 
 # ---------------- SEND MESSAGE ----------------
 @chat_bp.route("/message", methods=["POST"])
-@jwt_required()
+@protected("USER_READ")
 def message():
     client_uuid = get_jwt_identity()
     data = request.get_json()

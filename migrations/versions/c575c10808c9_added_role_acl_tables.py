@@ -60,8 +60,12 @@ def upgrade():
     )
     with op.batch_alter_table('client_list', schema=None) as batch_op:
         batch_op.add_column(sa.Column('role_uuid', sa.UUID(), nullable=True))
-        batch_op.create_foreign_key(None, 'client_roles', ['role_uuid'], ['uuid'])
-
+        batch_op.create_foreign_key(
+            'fk_client_list_role',
+            'client_roles',
+            ['role_uuid'],
+            ['uuid']
+        )
     # ### end Alembic commands ###
 
 

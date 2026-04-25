@@ -1,5 +1,4 @@
 from email import message
-
 import requests
 from datetime import datetime, timedelta
 from app.extensions import db
