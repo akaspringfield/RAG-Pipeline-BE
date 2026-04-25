@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import reset_password_service
 

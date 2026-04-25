@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from app import create_app
 from app.extensions import db
 

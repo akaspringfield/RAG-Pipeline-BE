@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from email import message
 import requests
 from datetime import datetime, timedelta

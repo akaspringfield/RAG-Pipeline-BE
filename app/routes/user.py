@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 

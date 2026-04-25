@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from datetime import datetime
 from app.extensions import db
 

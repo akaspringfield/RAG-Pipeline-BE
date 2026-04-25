@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from functools import wraps
 from flask_jwt_extended import get_jwt_identity
 

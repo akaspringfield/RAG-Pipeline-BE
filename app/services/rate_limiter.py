@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from app.services.redis_client import redis_client
 from datetime import datetime, timedelta
 

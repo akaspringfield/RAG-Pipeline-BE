@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from app.models.user import Client
 from app.models.client_acl import ClientACL 
 

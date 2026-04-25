@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from flask import Blueprint, request
 from flask_jwt_extended import create_access_token, create_refresh_token
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
@@ -132,28 +137,42 @@ def refresh_token():
         return error_response("Internal server error", 500, "INVALID_REFRESH")
 
 
-# ---------------- LOGOUT ----------------
+from app.extensions import db
+# ---------------- LOGOUT CURRENT SESSION ----------------
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
+    try:
+        data = request.get_json()
+        refresh_token = data.get("refresh_token")
 
-    data = request.get_json()
-    refresh_token = data.get("refresh_token")
+        if not refresh_token:
+            return error_response("refresh_token required", 400, "BAD_REQUEST")
 
-    if not refresh_token:
-        return error_response("refresh_token required", 400, "BAD_REQUEST")
+        user_uuid = get_jwt_identity()
 
-    jwt_data = get_jwt()
-    jti = jwt_data["jti"]
-    user_id = get_jwt_identity()
+        # hash refresh token (same hashing used during login)
+        incoming_hash = hash_refresh_token(refresh_token)
 
-    revoke_session(
-        refresh_token,
-        access_jti=jti,
-        user_id=user_id
-    )
+        # find active session
+        session = ClientSession.query.filter_by(
+            client_uuid=user_uuid,
+            refresh_token_hash=incoming_hash,
+            is_revoked=False
+        ).first()
 
-    return success_response(message="Logged out successfully")
+        if not session:
+            return error_response("Session not found", 404, "SESSION_NOT_FOUND")
+
+        # revoke session
+        session.is_revoked = True
+        db.session.commit()
+
+        return success_response(message="Logged out successfully")
+
+    except Exception as e:
+        print("LOGOUT ERROR:", str(e))
+        return error_response("Internal server error", 500, "LOGOUT_FAILED")
 
 
 # ---------------- FORGOT PASSWORD ----------------

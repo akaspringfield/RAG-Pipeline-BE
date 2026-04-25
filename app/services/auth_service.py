@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from datetime import datetime, timedelta
 from flask import request
 from flask_jwt_extended import (
@@ -15,7 +20,7 @@ from app.models.password_reset import PasswordReset
 from app.models.token_blacklist import TokenBlacklist
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import check_password_hash, generate_password_hash
-from werkzeug.security import generate_password_hash
+
 
 # ---------------- REGISTER ----------------
 def register_user(name, email, password):
@@ -53,39 +58,80 @@ def register_user(name, email, password):
 
 
 # ---------------- LOGIN ----------------
-def login_user(email: str, password: str):
+# def login_user(email: str, password: str):
+#     try:
+#         # 1️⃣ find client
+#         client = Client.query.filter_by(client_email=email).first()
+#         if not client:
+#             return None, None, "INVALID_CREDENTIALS"
+
+#         # 2️⃣ ensure password row exists
+#         if not client.password:
+#             return None, None, "PASSWORD_NOT_SET"
+
+#         # 3️⃣ verify bcrypt password from biscuits table
+#         if not verify_password(password, client.password.password_hash):
+#             return None, None, "INVALID_CREDENTIALS"
+
+#         # 4️⃣ generate JWT tokens
+#         access_token = create_access_token(identity=str(client.uuid))
+#         refresh_token = create_refresh_token(identity=str(client.uuid))
+
+#         # 5️⃣ store session
+#         store_session(
+#             user_uuid=client.uuid,
+#             refresh_token=refresh_token,
+#             device_info=request.headers.get("User-Agent"),
+#             ip_address=request.remote_addr
+#         )
+
+#         return access_token, refresh_token, None
+
+#     except Exception as e:
+#         print("LOGIN ERROR:", str(e))
+#         return None, None, "LOGIN_FAILED"
+
+
+from werkzeug.security import check_password_hash
+import hashlib
+def login_user(email, password):
     try:
-        # 1️⃣ find client
-        client = Client.query.filter_by(client_email=email).first()
-        if not client:
-            return None, None, "INVALID_CREDENTIALS"
+        # 1️⃣ find user
+        user = Client.query.filter_by(client_email=email).first()
+        if not user:
+            return None, None, "Invalid email or password"
 
-        # 2️⃣ ensure password row exists
-        if not client.password:
-            return None, None, "PASSWORD_NOT_SET"
+        # 2️⃣ get password row from biscuits table
+        password_row = ClientPassword.query.filter_by(
+            client_uuid=user.uuid
+        ).first()
 
-        # 3️⃣ verify bcrypt password from biscuits table
-        if not verify_password(password, client.password.password_hash):
-            return None, None, "INVALID_CREDENTIALS"
+        if not password_row:
+            return None, None, "Password not set for user"
 
-        # 4️⃣ generate JWT tokens
-        access_token = create_access_token(identity=str(client.uuid))
-        refresh_token = create_refresh_token(identity=str(client.uuid))
+        # 🚨🚨🚨 MOST IMPORTANT FIX
+        if not check_password_hash(password_row.password_hash, password):
+            return None, None, "Invalid email or password"
 
-        # 5️⃣ store session
-        store_session(
-            user_uuid=client.uuid,
-            refresh_token=refresh_token,
-            device_info=request.headers.get("User-Agent"),
-            ip_address=request.remote_addr
+        # 3️⃣ generate tokens
+        access_token = create_access_token(identity=str(user.uuid))
+        refresh_token = create_refresh_token(identity=str(user.uuid))
+
+        # 4️⃣ store refresh session (hash refresh token)
+        hashed_refresh = hashlib.sha256(refresh_token.encode()).hexdigest()
+
+        session = ClientSession(
+            client_uuid=user.uuid,
+            refresh_token_hash=hashed_refresh
         )
+        db.session.add(session)
+        db.session.commit()
 
         return access_token, refresh_token, None
 
     except Exception as e:
         print("LOGIN ERROR:", str(e))
         return None, None, "LOGIN_FAILED"
-    
 
 # ---------------- AUTHENTICATE (USED BY LOGIN ROUTE) ----------------
 def authenticate_user(email, password):

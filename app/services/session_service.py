@@ -1,3 +1,8 @@
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
 from flask_jwt_extended import get_jwt_identity
 from app.models.session import ClientSession
 from app.extensions import db
