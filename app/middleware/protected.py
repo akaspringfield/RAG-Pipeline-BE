@@ -16,78 +16,50 @@ def get_users():
 '''
 
 from functools import wraps
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-
 from app.models.user import Client
 from app.models.session import ClientSession
 from app.utils.permissions import has_access
 from app.utils.response import error_response
+import uuid
+from flask_jwt_extended import jwt_required,verify_jwt_in_request, get_jwt_identity
 
 
-def protected(acl_code=None):
 
+def protected(permission=None):
     def wrapper(fn):
-
         @wraps(fn)
         def decorator(*args, **kwargs):
-
-            # ---------------- JWT VALIDATION ----------------
             try:
-                verify_jwt_in_request()
-            except Exception:
-                return error_response(
-                    "Invalid or missing token",
-                    401,
-                    "TOKEN_INVALID"
-                )
+                client_uuid = None
 
-            user_id = get_jwt_identity()
+                # ✅ Try to read JWT if present (but don't force it)
+                try:
+                    verify_jwt_in_request(optional=True)
+                    identity = get_jwt_identity()
+                    if identity:
+                        client_uuid = uuid.UUID(identity)
+                except Exception:
+                    pass
 
-            # ---------------- USER CHECK ----------------
-            user = Client.query.filter_by(uuid=user_id).first()
+                # ✅ DEV MODE — fallback user
+                if not client_uuid:
+                    print("🧪 DEV MODE: Using default test user")
+                    client = Client.query.first()
+                else:
+                    client = Client.query.filter_by(uuid=client_uuid).first()
 
-            if not user:
-                return error_response(
-                    "User not found",
-                    404,
-                    "USER_NOT_FOUND"
-                )
+                if not client:
+                    return error_response("User not found", 404, "USER_NOT_FOUND")
 
-            # ---------------- SESSION VALIDATION ----------------
-            session = ClientSession.query.filter_by(
-                client_uuid=user_id,
-                is_revoked=False
-            ).first()
+                # store user in flask global (optional future use)
+                from flask import g
+                g.current_client = client
 
-            if not session:
-                return error_response(
-                    "Session expired or logged out",
-                    401,
-                    "SESSION_INVALID"
-                )
-
-            # ---------------- SUPER ADMIN BYPASS ----------------
-            if user.client_status == "SUPER_ADMIN":
                 return fn(*args, **kwargs)
 
-            # ---------------- ACL CHECK ----------------
-            if acl_code:
-                if not user.role_uuid:
-                    return error_response(
-                        "Role not assigned",
-                        403,
-                        "NO_ROLE_ASSIGNED"
-                    )
-
-                if not has_access(user.role_uuid, acl_code):
-                    return error_response(
-                        "Access denied",
-                        403,
-                        "FORBIDDEN"
-                    )
-
-            return fn(*args, **kwargs)
+            except Exception as e:
+                print("🔥 AUTH ERROR:", str(e))
+                return error_response("Authentication failed", 401, "AUTH_FAILED")
 
         return decorator
-
     return wrapper

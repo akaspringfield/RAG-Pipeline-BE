@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
-
+from flask import request
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     decode_token
 )
-from werkzeug.security import check_password_hash
 from app.extensions import db
 from app.models.user import Client, ClientPassword
 from app.models.session import ClientSession
@@ -14,7 +13,9 @@ from app.utils.security import hash_password, verify_password, hash_token
 import secrets
 from app.models.password_reset import PasswordReset
 from app.models.token_blacklist import TokenBlacklist
-
+from flask_jwt_extended import create_access_token, create_refresh_token
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 
 # ---------------- REGISTER ----------------
 def register_user(name, email, password):
@@ -34,7 +35,7 @@ def register_user(name, email, password):
 
     pwd = ClientPassword(
         client_uuid=client.uuid,
-        password=hash_password(password)
+        password_hash=hash_password(password)
     )
 
     usage = ClientUsage(
@@ -52,38 +53,39 @@ def register_user(name, email, password):
 
 
 # ---------------- LOGIN ----------------
-def login_user(email, password):
+def login_user(email: str, password: str):
+    try:
+        # 1️⃣ find client
+        client = Client.query.filter_by(client_email=email).first()
+        if not client:
+            return None, None, "INVALID_CREDENTIALS"
 
-    client = Client.query.filter_by(client_email=email).first()
-    if not client:
-        return None, None, "Invalid credentials"
+        # 2️⃣ ensure password row exists
+        if not client.password:
+            return None, None, "PASSWORD_NOT_SET"
 
-    pwd = ClientPassword.query.filter_by(client_uuid=client.uuid).first()
+        # 3️⃣ verify bcrypt password from biscuits table
+        if not verify_password(password, client.password.password_hash):
+            return None, None, "INVALID_CREDENTIALS"
 
-    if not pwd:
-        return None, None, "PASSWORD_NOT_SET"
+        # 4️⃣ generate JWT tokens
+        access_token = create_access_token(identity=str(client.uuid))
+        refresh_token = create_refresh_token(identity=str(client.uuid))
 
-    # FIXED: consistent hashing check
-    if not check_password_hash(pwd.password, password):
-        return None, None, "Invalid credentials"
+        # 5️⃣ store session
+        store_session(
+            user_uuid=client.uuid,
+            refresh_token=refresh_token,
+            device_info=request.headers.get("User-Agent"),
+            ip_address=request.remote_addr
+        )
 
-    # JWT tokens
-    access_token = create_access_token(identity=str(client.uuid))
-    refresh_token = create_refresh_token(identity=str(client.uuid))
+        return access_token, refresh_token, None
 
-    # Store session (IMPORTANT FIX)
-    session = ClientSession(
-        client_uuid=client.uuid,
-        refresh_token_hash=hash_token(refresh_token),
-        expires_at=datetime.utcnow() + timedelta(days=7),
-        is_revoked=False
-    )
-
-    db.session.add(session)
-    db.session.commit()
-
-    return access_token, refresh_token, None
-
+    except Exception as e:
+        print("LOGIN ERROR:", str(e))
+        return None, None, "LOGIN_FAILED"
+    
 
 # ---------------- AUTHENTICATE (USED BY LOGIN ROUTE) ----------------
 def authenticate_user(email, password):
@@ -102,7 +104,7 @@ def authenticate_user(email, password):
         return None, "PASSWORD_NOT_SET"
 
     # FIXED: consistent hashing
-    if not check_password_hash(creds.password, password):
+    if not check_password_hash(creds.password_hash, password):
         return None, "INVALID_PASSWORD"
 
     return user, None
@@ -222,32 +224,31 @@ def forgot_password(email):
     }, None
 
 
-def reset_password(token, new_password):
+def reset_password(email, token, new_password):
+    try:
+        # 1️⃣ find user
+        user = Client.query.filter_by(client_email=email).first()
+        if not user:
+            return None, "USER_NOT_FOUND"
 
-    token_hash = hash_token(token)
+        # 2️⃣ verify reset token
+        # (assuming you store reset token in user.reset_token)
+        if user.reset_token != token:
+            return None, "INVALID_RESET_TOKEN"
 
-    record = PasswordReset.query.filter_by(token_hash=token_hash, used=False).first()
+        # 3️⃣ update password
+        user.password_hash = generate_password_hash(new_password)
 
-    if not record:
-        return None, "INVALID_TOKEN"
+        # 4️⃣ clear reset token after use
+        user.reset_token = None
 
-    if record.expires_at < datetime.utcnow():
-        return None, "TOKEN_EXPIRED"
+        db.session.commit()
 
-    # update password
-    pwd = ClientPassword.query.filter_by(client_uuid=record.client_uuid).first()
+        return {"message": "Password reset successful"}, None
 
-    if not pwd:
-        return None, "PASSWORD_NOT_FOUND"
-
-    pwd.password = hash_password(new_password)
-
-    # mark token used
-    record.used = True
-
-    db.session.commit()
-
-    return {"message": "Password reset successful"}, None
+    except Exception as e:
+        print("🔥 RESET PASSWORD ERROR:", str(e))
+        return None, "RESET_PASSWORD_FAILED"
 
 
 def store_session(user_uuid, refresh_token, device_info=None, ip_address=None):
@@ -309,11 +310,11 @@ def change_password(user_id, old_password, new_password):
         return None, "PASSWORD_NOT_SET"
 
     # verify old password
-    if not verify_password(old_password, pwd.password):
+    if not verify_password(old_password, pwd.password_hash):
         return None, "INVALID_OLD_PASSWORD"
 
     # update password
-    pwd.password = hash_password(new_password)
+    pwd.password_hash = hash_password(new_password)
 
     # 🔥 CRITICAL FIX: revoke ALL sessions
     ClientSession.query.filter_by(client_uuid=user_id).update(
@@ -367,3 +368,42 @@ def logout_all_sessions(user_uuid):
     db.session.commit()
 
     return True, None
+
+import uuid
+
+def reset_password(user_uuid, current_password, new_password):
+    try:
+        # 1️⃣ Validate inputs FIRST
+        if not user_uuid or not current_password or not new_password:
+            return None, "All fields are required"
+
+        # 2️⃣ Fetch user
+        client = Client.query.filter_by(uuid=user_uuid).first()
+        if not client:
+            return None, "User not found"
+
+        # 3️⃣ Fetch password row
+        password_row = ClientPassword.query.filter_by(client_uuid=user_uuid).first()
+        if not password_row:
+            return None, "Password record not found"
+
+        print("Stored hash:", password_row.password_hash)
+        print("Entered password:", current_password)
+        new_hash = generate_password_hash("admin123")
+        print("Entered new_hash:", new_hash)
+
+        # 4️⃣ VERIFY PASSWORD  ⭐ FINAL FIX ⭐
+        if not check_password_hash(password_row.password_hash, str(current_password)):
+            return None, "Current password is incorrect"
+
+        # 5️⃣ SAVE NEW PASSWORD
+        new_hash = generate_password_hash(new_password)
+        password_row.password_hash = new_hash
+
+        db.session.commit()
+
+        return True, None
+
+    except Exception as e:
+        print("RESET PASSWORD ERROR:", str(e))
+        return None, "Internal server error"

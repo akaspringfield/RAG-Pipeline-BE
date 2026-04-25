@@ -53,14 +53,13 @@ import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 
-from app.extensions import db
-from app.models.user import Client
-from app.models.role import ClientRole
-from app.models.acl import ClientACL
-from app.models.role_mapping import ClientRoleMapping
-
 
 def seed_superadmin():
+    from app.extensions import db
+    from app.models.user import Client, ClientPassword
+    from app.models.role import ClientRole
+    from app.models.acl import ClientACL
+    from app.models.role_mapping import ClientRoleMapping
 
     # ---------------- CONFIG ----------------
     email = os.getenv("SUPERADMIN_EMAIL", "superadmin@hochrise.com")
@@ -147,13 +146,24 @@ def seed_superadmin():
         client_status="active",
     )
 
-    user.password_hash = generate_password_hash(password)
-
     db.session.add(user)
+    db.session.flush()
+
+    # Create password entry in ClientPassword table
+    pwd = ClientPassword(
+        uuid=uuid.uuid4(),
+        client_uuid=user.uuid,
+        password_hash=generate_password_hash(password)
+    )
+    
+    db.session.add(pwd)
     db.session.commit()
 
     print("🚀 Superadmin user created successfully!")
 
 
 if __name__ == "__main__":
-    seed_superadmin()
+    from app import create_app
+    app = create_app()
+    with app.app_context():
+        seed_superadmin()

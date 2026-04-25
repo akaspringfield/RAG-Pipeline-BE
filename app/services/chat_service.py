@@ -12,7 +12,7 @@ from app.utils.token_counter import count_tokens
 
 
 # ---------------- CHECK QUOTA ----------------
-def check_quota(client_uuid, tokens_used):
+def check_quota(client_uuid, tokens_used): 
 
     # 1. Get usage first
     usage = ClientUsage.query.filter_by(client_uuid=client_uuid).first()

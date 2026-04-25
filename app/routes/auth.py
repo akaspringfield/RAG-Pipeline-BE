@@ -12,7 +12,9 @@ from app.services.auth_service import (
 )
 
 from app.utils.response import success_response, error_response
-from app.services.auth_service import logout_all_sessions
+from app.services.auth_service import logout_all_sessions,login_user
+from app.models.session import ClientSession
+from app.models.user import Client
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -53,7 +55,7 @@ def login():
     if not data:
         return error_response("Request body required", 400, "BAD_REQUEST")
 
-    user, error = authenticate_user(
+    access_token, refresh_token, error = login_user(
         data.get("email"),
         data.get("password")
     )
@@ -61,51 +63,76 @@ def login():
     if error:
         return error_response(error, 401, error)
 
-    access_token = create_access_token(identity=str(user.uuid))
-    refresh_token = create_refresh_token(identity=str(user.uuid))
-
-    store_session(
-        user_uuid=user.uuid,
-        refresh_token=refresh_token,
-        device_info=request.headers.get("User-Agent"),
-        ip_address=request.remote_addr
-    )
-
     return success_response(
         data={
             "access_token": access_token,
-            "refresh_token": refresh_token,
-            "user": {
-                "uuid": str(user.uuid),
-                "name": user.client_name,
-                "email": user.client_email
-            }
+            "refresh_token": refresh_token
         },
         message="Login successful"
     )
 
+# hasing function for refresh token
+import hashlib
 
-# ---------------- REFRESH ----------------
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+# ---------------- REFRESH TOKEN ----------------
 @auth_bp.route("/refresh", methods=["POST"])
-def refresh():
-    data = request.get_json()
+@jwt_required(refresh=True)
+def refresh_token():
+    try:
+        print("🔄 Refresh requested")
+        # JWT already validated by decorator
+        client_uuid = get_jwt_identity()
+        jwt_data = get_jwt()
 
-    if not data:
-        return error_response("Request body required", 400, "BAD_REQUEST")
+        # Extract refresh token from header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return error_response("Authorization header missing", 401, "INVALID_REFRESH")
 
-    access_token, error = refresh_session(data.get("refresh_token"))
+        refresh_token = auth_header.split(" ")[1]
 
-    if error:
-        return error_response(error, 401, "INVALID_REFRESH")
+        print("🔄 Refresh for user:", client_uuid)
 
-    return success_response(
-        data={"access_token": access_token},
-        message="Token refreshed"
-    )
+        # 1️⃣ Check client exists
+        client = Client.query.get(client_uuid)
+        if not client:
+            return error_response("User not found", 404, "USER_NOT_FOUND")
+
+        # hash incoming refresh token
+        incoming_hash = hash_refresh_token(refresh_token)
+        print(f"User {client_uuid} ---  red - {refresh_token} incoming_hash - {incoming_hash}")
+
+        # 2️⃣ Check refresh token in DB session table
+        session = ClientSession.query.filter_by(
+            client_uuid=client_uuid,
+            refresh_token_hash=incoming_hash,
+            is_revoked=False
+        ).first()
+
+        if not session:
+            print("❌ Refresh token not found in DB")
+            return error_response("Invalid refresh token", 401, "INVALID_REFRESH")
+
+        # 3️⃣ Generate new access token
+        new_access_token = create_access_token(identity=str(client.uuid))
+
+        print("✅ New access token issued")
+
+        return success_response(
+            data={"access_token": new_access_token},
+            message="Token refreshed successfully"
+        )
+
+    except Exception as e:
+        print("🔥 REFRESH ERROR:", str(e))
+        return error_response("Internal server error", 500, "INVALID_REFRESH")
 
 
 # ---------------- LOGOUT ----------------
-
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
@@ -151,24 +178,31 @@ def forgot():
 # ---------------- RESET PASSWORD ----------------
 @auth_bp.route("/reset-password", methods=["POST"])
 def reset():
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    if not data:
-        return error_response("Request body required", 400, "BAD_REQUEST")
+        if not data:
+            return error_response("Request body required", 400, "BAD_REQUEST")
 
-    result, error = reset_password(
-        data.get("email"),
-        data.get("token"),
-        data.get("new_password")
-    )
+        result, error = reset_password(
+            data.get("user_uuid"),
+            data.get("current_password"),
+            data.get("new_password")
+        )
 
-    if error:
-        return error_response(error, 400, error)
+        # ❌ service returned business error
+        if error:
+            return error_response(error, 400, error)
 
-    return success_response(
-        data=result,
-        message="Password updated successfully"
-    )
+        # ✅ success
+        return success_response(
+            data=result,
+            message="Password updated successfully"
+        )
+
+    except Exception as e:
+        print("🔥 RESET ROUTE ERROR:", str(e))
+        return error_response("Internal server error", 500, "INTERNAL_ERROR")
 
 
 # ---------------- LOGOUT ALL SESSIONS ----------------
@@ -186,3 +220,53 @@ def logout_all():
     return success_response(
         message="All sessions logged out successfully"
     )
+
+# ---------------- UPDATE PASSWORD (LOGGED IN USER) ----------------
+from werkzeug.security import check_password_hash, generate_password_hash
+
+@auth_bp.route("/update-password", methods=["POST"])
+@jwt_required()
+def update_password():
+    try:
+        client_uuid = get_jwt_identity()
+        data = request.get_json()
+
+        if not data:
+            return error_response("Request body required", 400, "BAD_REQUEST")
+
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
+
+        if not current_password or not new_password:
+            return error_response(
+                "current_password and new_password required",
+                400,
+                "VALIDATION_ERROR"
+            )
+
+        # 1️⃣ get user
+        client = Client.query.get(client_uuid)
+        if not client:
+            return error_response("User not found", 404, "USER_NOT_FOUND")
+
+        # 2️⃣ verify current password
+        if not check_password_hash(client.password_hash, current_password):
+            return error_response(
+                "Current password is incorrect",
+                401,
+                "INVALID_PASSWORD"
+            )
+
+        # 3️⃣ update password
+        client.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+
+        return success_response(
+            message="Password updated successfully"
+        )
+
+    except Exception as e:
+        print("🔥 UPDATE PASSWORD ERROR:", str(e))
+        return error_response("Internal server error", 500, "UPDATE_PASSWORD_FAILED")
+    
+

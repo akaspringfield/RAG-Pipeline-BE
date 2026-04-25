@@ -21,4 +21,5 @@ class Config:
     AI_RESPONSE_TIMEOUT = int(os.getenv("AI_RESPONSE_TIMEOUT", 600))
     REDIS_HOST = "localhost"
     REDIS_PORT = 6379
-    
+
+
