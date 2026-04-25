@@ -16,6 +16,8 @@ from app.models.session import ClientSession
 from app.models.usage import ClientUsage
 from app.utils.security import hash_password, verify_password, hash_token
 import secrets
+import uuid
+
 from app.models.password_reset import PasswordReset
 from app.models.token_blacklist import TokenBlacklist
 from flask_jwt_extended import create_access_token, create_refresh_token
@@ -415,7 +417,6 @@ def logout_all_sessions(user_uuid):
 
     return True, None
 
-import uuid
 
 def reset_password(user_uuid, current_password, new_password):
     try:

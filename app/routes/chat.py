@@ -5,21 +5,16 @@ GitHub: https://github.com/akaspringfield
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.middleware.protected import protected
 
 from app.services.chat_service import create_chat, send_message
 from app.utils.response import success_response, error_response
 from app.constants.error_codes import ERROR_MAP
-
-from app.models.user import Client
-from app.models.acl import ClientACL
-from app.utils.auth_helper import get_current_client
 chat_bp = Blueprint("chat", __name__)
 
 
 # ---------------- CREATE CHAT ----------------
-@chat_bp.route("/create", methods=["POST"])
-@protected("USER_READ")
+@chat_bp.route("/create", methods=["POST"]) 
+@jwt_required()
 def create():
     client_uuid = get_jwt_identity()
     data = request.json
@@ -34,7 +29,7 @@ def create():
 
 # ---------------- SEND MESSAGE ----------------
 @chat_bp.route("/message", methods=["POST"])
-@protected("USER_READ")
+@jwt_required()
 def message():
     try:
         client_uuid = get_jwt_identity()

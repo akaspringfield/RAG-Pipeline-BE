@@ -20,6 +20,9 @@ from app.utils.response import success_response, error_response
 from app.services.auth_service import logout_all_sessions,login_user
 from app.models.session import ClientSession
 from app.models.user import Client
+from app.extensions import db
+from app.models.token_blacklist import TokenBlacklist
+from datetime import datetime
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -137,41 +140,53 @@ def refresh_token():
         return error_response("Internal server error", 500, "INVALID_REFRESH")
 
 
-from app.extensions import db
-# ---------------- LOGOUT CURRENT SESSION ----------------
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         refresh_token = data.get("refresh_token")
 
         if not refresh_token:
             return error_response("refresh_token required", 400, "BAD_REQUEST")
 
+        # JWT data
+        jwt_data = get_jwt()
+        jti = jwt_data["jti"]
+
+        # user id from JWT
         user_uuid = get_jwt_identity()
 
-        # hash refresh token (same hashing used during login)
+        # blacklist access token WITH user_id
+        revoked_token = TokenBlacklist(
+            jti=jti,
+            user_id=user_uuid,
+            revoked_at=datetime.utcnow()
+        )
+
+        db.session.add(revoked_token)
+
+        # optional: revoke session logic
         incoming_hash = hash_refresh_token(refresh_token)
 
-        # find active session
-        session = ClientSession.query.filter_by(
+        session_obj = ClientSession.query.filter_by(
             client_uuid=user_uuid,
             refresh_token_hash=incoming_hash,
             is_revoked=False
         ).first()
 
-        if not session:
+        if not session_obj:
             return error_response("Session not found", 404, "SESSION_NOT_FOUND")
 
-        # revoke session
-        session.is_revoked = True
+        session_obj.is_revoked = True
+
         db.session.commit()
 
         return success_response(message="Logged out successfully")
 
-    except Exception as e:
-        print("LOGOUT ERROR:", str(e))
+    except Exception as e: 
+        import traceback
+        print("LOGOUT ERROR:", traceback.format_exc())
         return error_response("Internal server error", 500, "LOGOUT_FAILED")
 
 
@@ -228,17 +243,37 @@ def reset():
 @auth_bp.route("/logout-all", methods=["POST"])
 @jwt_required()
 def logout_all():
+    try:
+        user_id = get_jwt_identity()
+        print("USER_ID FROM JWT:", get_jwt_identity())
+        if not user_id:
+            return error_response("Invalid user session", 401, "INVALID_USER")
 
-    user_id = get_jwt_identity()
+        jwt_data = get_jwt()
+        jti = jwt_data["jti"]
 
-    success, error = logout_all_sessions(user_id)
+        # blacklist current access token (optional but fine)
+        db.session.add(TokenBlacklist(
+            jti=jti,
+            user_id=user_id,
+            revoked_at=datetime.utcnow()
+        ))
 
-    if error:
-        return error_response(error, 400, "LOGOUT_ALL_FAILED")
+        # revoke ALL sessions for this user
+        ClientSession.query.filter_by(
+            client_uuid=user_id,
+            is_revoked=False
+        ).update({"is_revoked": True})
 
-    return success_response(
-        message="All sessions logged out successfully"
-    )
+        db.session.commit()
+
+        return success_response(message="All sessions logged out successfully")
+
+    except Exception as e:
+        import traceback
+        print("LOGOUT-ALL ERROR:", traceback.format_exc())
+        return error_response("Internal server error", 500, "LOGOUT_ALL_FAILED")
+
 
 # ---------------- UPDATE PASSWORD (LOGGED IN USER) ----------------
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -287,5 +322,3 @@ def update_password():
     except Exception as e:
         print("🔥 UPDATE PASSWORD ERROR:", str(e))
         return error_response("Internal server error", 500, "UPDATE_PASSWORD_FAILED")
-    
-

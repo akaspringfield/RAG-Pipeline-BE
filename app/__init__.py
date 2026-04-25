@@ -9,6 +9,8 @@ from flask_jwt_extended import JWTManager
 from app.models.token_blacklist import TokenBlacklist
 
 
+jwt = JWTManager()
+
 
 def create_app():
     app = Flask(__name__)
@@ -18,6 +20,14 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+
+    # TO BLOCK AFTER LOGOUT
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload["jti"]
+        token = TokenBlacklist.query.filter_by(jti=jti).first()
+        return token is not None
+
 
     # ---------------- IMPORT MODELS (SAFE IMPORT) ----------------
     # Import once to register metadata (avoid circular imports carefully)
@@ -94,12 +104,12 @@ def create_app():
     return app
 
 
-jwt = JWTManager()
+# jwt = JWTManager()
 
-@jwt.token_in_blocklist_loader
-def check_if_token_revoked(jwt_header, jwt_payload):
-    jti = jwt_payload["jti"]
+# @jwt.token_in_blocklist_loader
+# def check_if_token_revoked(jwt_header, jwt_payload):
+#     jti = jwt_payload["jti"]
 
-    token = TokenBlacklist.query.filter_by(jti=jti).first()
+#     token = TokenBlacklist.query.filter_by(jti=jti).first()
 
-    return token is not None
+#     return token is not None
