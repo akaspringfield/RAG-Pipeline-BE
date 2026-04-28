@@ -46,15 +46,21 @@ def create_app():
     app.register_blueprint(session_bp, url_prefix="/session")
 
     # ---------------- SEED DATA (RUN ONLY ON FIRST DEPLOY) ----------------
+    # if (
+    #     os.getenv("SEED_DATA") == "true"
+    #     and "flask" not in sys.argv[0]   # 🔥 prevents during CLI
+    # ):
+    #     from app.scripts.seed_data import seed_data
+    #     with app.app_context():
+    #         seed_data()
+
     import os
 
-    if (
-        os.getenv("SEED_DATA") == "true"
-        and "flask" not in sys.argv[0]   # 🔥 prevents during CLI
-    ):
-        from app.scripts.seed_superadmin import seed_superadmin
+    if os.getenv("SEED_DATA", "false").lower() == "true":
+        from app.scripts.seed_data import seed_data
         with app.app_context():
-            seed_superadmin()
+            seed_data()
+
 
     # ---------------- JWT ERROR HANDLERS ----------------
     @jwt.unauthorized_loader
