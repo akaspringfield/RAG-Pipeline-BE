@@ -8,7 +8,6 @@ from flask_jwt_extended import get_jwt_identity
 
 from app.models.user import Client
 from app.models.session import ClientSession
-from app.utils.permissions import has_access
 from app.utils.response import error_response
 
 
@@ -65,13 +64,7 @@ def require_acl(acl_code):
                     error_code="NO_ROLE_ASSIGNED"
                 )
 
-            # ---------------- ACL CHECK ----------------
-            if not has_access(user.role_uuid, acl_code):
-                return error_response(
-                    message="Access denied",
-                    status=403,
-                    error_code="FORBIDDEN"
-                )
+
 
             return fn(*args, **kwargs)
 

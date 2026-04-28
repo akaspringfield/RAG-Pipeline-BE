@@ -57,14 +57,12 @@ import uuid
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash
-
+from app import create_app
 
 def seed_superadmin():
     from app.extensions import db
     from app.models.user import Client, ClientPassword
-    from app.models.role import ClientRole
-    from app.models.acl import ClientACL
-    from app.models.role_mapping import ClientRoleMapping
+    from app.models.role import ClientACL,ClientRole,ClientRoleMapping
 
     # ---------------- CONFIG ----------------
     email = os.getenv("SUPERADMIN_EMAIL", "superadmin@hochrise.com")
@@ -104,11 +102,13 @@ def seed_superadmin():
         if not acl:
             acl = ClientACL(
                 uuid=uuid.uuid4(),
+                acl_key=title,          # ✅ ADD THIS (CRITICAL FIX)
                 acl_title=title,
                 acl_description=desc,
                 status="active",
                 created_on=datetime.utcnow()
             )
+
             db.session.add(acl)
             db.session.flush()
             print(f"✅ ACL created: {title}")
@@ -118,24 +118,29 @@ def seed_superadmin():
     db.session.commit()
 
     # ---------------- MAP ALL ACLs TO ROLE ----------------
+    from app.models.role import RoleACLMapping
+
+    SYSTEM_USER_UUID = uuid.uuid4()
     for acl in acl_objects:
-        mapping = ClientRoleMapping.query.filter_by(
+        mapping = RoleACLMapping.query.filter_by(
             role_uuid=role.uuid,
             acl_uuid=acl.uuid
         ).first()
 
         if not mapping:
-            mapping = ClientRoleMapping(
+            mapping = RoleACLMapping(
                 uuid=uuid.uuid4(),
                 role_uuid=role.uuid,
                 acl_uuid=acl.uuid,
                 status="active",
-                created_on=datetime.utcnow()
+                created_on=datetime.utcnow(),
+                created_by=SYSTEM_USER_UUID
             )
             db.session.add(mapping)
 
     db.session.commit()
     print("✅ All ACLs mapped to SUPER_ADMIN")
+
 
     # ---------------- CREATE USER ----------------
     user = Client.query.filter_by(client_email=email).first()

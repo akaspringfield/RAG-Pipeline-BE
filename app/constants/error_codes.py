@@ -58,6 +58,7 @@ ERROR_MAP = {
         "message": "Invalid refresh token"
     },
 
+ 
 
     # ---------------- REQUEST VALIDATION ----------------
     "BAD_REQUEST": {
@@ -83,6 +84,21 @@ ERROR_MAP = {
     "BAD_REQUEST": {
         "status": 400,
         "message": "Bad request"
+    },
+
+   "NO_ACL_ASSIGNED": {
+        "status": 403,
+        "message": "No permissions assigned to user"
+    },
+
+    "FORBIDDEN": {
+        "status": 403,
+        "message": "You don't have permission to access this resource"
+    },
+
+    "ACCESS_DENIED": {
+        "status": 403,
+        "message": "You don't have permission to access this resource"
     },
 
     # ---------------- RATE LIMIT ----------------

@@ -1,17 +1,19 @@
 '''
 Author : Akash Mambally
-GitHub: https://github.com/akaspringfield
 '''
 
 from datetime import datetime
 from app.extensions import db
+from app.models.role import (
+    ClientRole,
+    ClientACL,
+    RoleACLMapping,
+    ClientRoleMapping
+)
 
-from app.models.role import ClientRole
-from app.models.role_mapping import ClientRoleMapping
-from app.models.acl import ClientACL
-
-
-# ---------------- ROLES ----------------
+# =========================================================
+# ROLES
+# =========================================================
 
 def create_role(data):
     role = ClientRole(
@@ -42,10 +44,13 @@ def list_roles():
     ]
 
 
-# ---------------- ACL ----------------
+# =========================================================
+# ACL
+# =========================================================
 
 def create_acl(data):
     acl = ClientACL(
+        acl_key=data["acl_key"],  # ⭐ IMPORTANT
         acl_title=data["acl_title"],
         acl_description=data.get("acl_description"),
         status="active"
@@ -56,7 +61,7 @@ def create_acl(data):
 
     return {
         "uuid": str(acl.uuid),
-        "acl_title": acl.acl_title
+        "acl_key": acl.acl_key
     }
 
 
@@ -66,91 +71,109 @@ def list_acls():
     return [
         {
             "uuid": str(a.uuid),
-            "acl_title": a.acl_title,
+            "acl_key": a.acl_key,
             "status": a.status
         }
         for a in acls
     ]
 
 
-# ---------------- ROLE → ACL MAPPING ----------------
+# =========================================================
+# ROLE → ACL MAPPING  (Role Permissions)
+# =========================================================
 
-def assign_acl_to_role(role_id, acl_ids):
-    for acl_id in acl_ids:
+def assign_acl_to_role(role_uuid, acl_uuids):
 
-        # avoid duplicate mapping
-        existing = ClientRoleMapping.query.filter_by(
-            role_uuid=role_id,
-            acl_uuid=acl_id
+    for acl_uuid in acl_uuids:
+
+        # avoid duplicates
+        exists = RoleACLMapping.query.filter_by(
+            role_uuid=role_uuid,
+            acl_uuid=acl_uuid
         ).first()
 
-        if existing:
+        if exists:
             continue
 
-        mapping = ClientRoleMapping(
-            role_uuid=role_id,
-            acl_uuid=acl_id,
-            status="active",
-            created_on=datetime.utcnow()
+        mapping = RoleACLMapping(
+            role_uuid=role_uuid,
+            acl_uuid=acl_uuid
         )
-
         db.session.add(mapping)
 
     db.session.commit()
 
 
-def get_role_acls(role_id):
-    mappings = ClientRoleMapping.query.filter_by(
-        role_uuid=role_id,
-        status="active"
-    ).all()
-
+def get_role_acls(role_uuid):
+    mappings = RoleACLMapping.query.filter_by(role_uuid=role_uuid).all()
     return [str(m.acl_uuid) for m in mappings]
 
 
-# ---------------- ACCESS CHECK ----------------
+# =========================================================
+# CLIENT → ROLE ASSIGNMENT
+# =========================================================
 
-def has_access(role_uuid, acl_code):
-    """
-    Core permission check with SUPER_ADMIN bypass
-    """
+def assign_role_to_client(client_uuid, role_uuid):
 
-    # 🔹 GET ROLE
-    role = ClientRole.query.filter_by(uuid=role_uuid).first()
+    exists = ClientRoleMapping.query.filter_by(
+        client_uuid=client_uuid,
+        role_uuid=role_uuid
+    ).first()
 
-    if not role:
-        return False
+    if exists:
+        return
 
-    # 🔹 SUPER ADMIN BYPASS
-    if role.role_name == "SUPER_ADMIN":
-        return True
-
-    # 🔹 GET ACTIVE MAPPINGS
-    mappings = ClientRoleMapping.query.filter_by(
+    mapping = ClientRoleMapping(
+        client_uuid=client_uuid,
         role_uuid=role_uuid,
-        status="active"
-    ).all()
+        status="active",
+        access_valid_from=datetime.utcnow()
+    )
 
-    now = datetime.utcnow()
-    valid_acl_ids = []
+    db.session.add(mapping)
+    db.session.commit()
 
-    for m in mappings:
-        if m.access_valid_from and now < m.access_valid_from:
-            continue
 
-        if m.access_valid_to and now > m.access_valid_to:
-            continue
+# =========================================================
+# 🔐 MAIN PERMISSION ENGINE
+# =========================================================
 
-        valid_acl_ids.append(m.acl_uuid)
+def has_access(client_uuid: str, acl_key: str) -> bool:
+    try:
+        now = datetime.utcnow()
 
-    if not valid_acl_ids:
+        # 1️⃣ Get client's role
+        role_mapping = ClientRoleMapping.query.filter_by(
+            client_uuid=client_uuid,
+            status="active"
+        ).first()
+
+        if not role_mapping:
+            return False
+
+        # date validation
+        if role_mapping.access_valid_from and now < role_mapping.access_valid_from:
+            return False
+        if role_mapping.access_valid_to and now > role_mapping.access_valid_to:
+            return False
+
+        # 2️⃣ Find ACL by key
+        acl = ClientACL.query.filter_by(
+            acl_key=acl_key,
+            status="active"
+        ).first()
+
+        if not acl:
+            return False
+
+        # 3️⃣ Check role permission
+        role_acl = RoleACLMapping.query.filter_by(
+            role_uuid=role_mapping.role_uuid,
+            acl_uuid=acl.uuid
+        ).first()
+
+        return role_acl is not None
+
+    except Exception as e:
+        print("RBAC ERROR:", str(e))
         return False
-
-    # 🔹 FETCH ACL TITLES
-    acls = ClientACL.query.filter(
-        ClientACL.uuid.in_(valid_acl_ids)
-    ).all()
-
-    allowed_acls = {acl.acl_title for acl in acls}
-
-    return acl_code in allowed_acls

@@ -9,6 +9,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.user import Client
 from app.services.acl_service import list_all_acls
 from app.utils.response import success_response, error_response
+from app.utils.decorators import protected
 
 acl_bp = Blueprint("acl", __name__)
 
@@ -16,6 +17,7 @@ acl_bp = Blueprint("acl", __name__)
 # ---------------- LIST ALL ACLS (SUPERADMIN ONLY) ----------------
 @acl_bp.route("/", methods=["GET"])
 @jwt_required()
+@protected("CHAT_SEND")
 def get_acls():
 
     user_id = get_jwt_identity()

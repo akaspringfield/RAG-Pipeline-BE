@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from app.extensions import db
 from app.models.user import Client
-from app.utils.permissions import has_access
+
 
 class ChatHistory(db.Model):
     __tablename__ = "client_chat_history"

@@ -6,10 +6,10 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "super-secret")
-
+ 
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/flask_ai"
+        "postgresql+psycopg://postgres:admin123@localhost:5432/rag_ai"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

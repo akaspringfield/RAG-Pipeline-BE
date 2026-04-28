@@ -13,13 +13,14 @@ from app.services.admin_service import (
     toggle_user_status
 )
 from app.utils.response import success_response, error_response
+from app.utils.decorators import protected
 
 admin_bp = Blueprint("admin", __name__)
 
 
 @admin_bp.route("/users", methods=["GET"])
 @jwt_required()
-@require_acl("SUPER_ADMIN")
+@protected("CHAT_SEND")
 def get_users():
 
     users = list_all_users()
@@ -32,7 +33,7 @@ def get_users():
 
 @admin_bp.route("/acls", methods=["GET"])
 @jwt_required()
-@require_acl("SUPER_ADMIN")
+@protected("CHAT_SEND")
 def get_acls():
 
     data = list_all_acls()
@@ -45,7 +46,7 @@ def get_acls():
 
 @admin_bp.route("/user/status", methods=["POST"])
 @jwt_required()
-@require_acl("SUPER_ADMIN")
+@protected("CHAT_SEND")
 def update_user_status():
 
     data = request.get_json()

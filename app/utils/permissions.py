@@ -1,3 +1,11 @@
+'''
+permissions.py
+│
+├── get_role_acls()   → fetch data
+├── require_acl()     → enforce access (YOU JUST ADDED THIS)
+'''
+
+
 from datetime import datetime
 
 from app.extensions import db
@@ -37,7 +45,8 @@ def get_role_acls(role_uuid, use_cache=True):
         acl_ids.append(m.acl_uuid)
 
     if not acl_ids:
-        return set()
+        ROLE_CACHE[role_uuid] = set()
+        return set()   # ✅ explicit empty set
 
     acls = ClientACL.query.filter(
         ClientACL.uuid.in_(acl_ids),
@@ -48,18 +57,54 @@ def get_role_acls(role_uuid, use_cache=True):
 
     ROLE_CACHE[role_uuid] = acl_titles
     return acl_titles
+ 
+
+from flask import jsonify
+from flask_jwt_extended import get_jwt_identity
 
 
-# ---------------- CORE PERMISSION CHECK ----------------
-def has_access(role_uuid, acl_code):
+def require_acl(acl_key):
     """
-    Check if role has access to a specific ACL
+    Central permission gate
+    Blocks user if:
+    - no role
+    - no ACLs
+    - ACL not present
     """
 
-    # SUPER ADMIN bypass
-    if role_uuid and str(role_uuid).upper() == "SUPER_ADMIN":
-        return True
+    def wrapper(fn):
+        from functools import wraps
 
-    allowed_acls = get_role_acls(role_uuid)
+        @wraps(fn)
+        def decorated(*args, **kwargs):
 
-    return acl_code in allowed_acls
+            user_id = get_jwt_identity()
+
+            user = Client.query.filter_by(uuid=user_id).first()
+
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
+            if not user.role_uuid:
+                return jsonify({"error": "No role assigned"}), 403
+
+            # 🔥 fetch ACLs using your function
+            acl_set = get_role_acls(user.role_uuid)
+
+            # 🚨 BLOCK IF EMPTY (your requirement)
+            if not acl_set:
+                return jsonify({
+                    "error": "No permissions assigned. Access denied."
+                }), 403
+
+            # 🚨 CHECK SPECIFIC ACL
+            if acl_key not in acl_set:
+                return jsonify({
+                    "error": f"Permission denied: {acl_key}"
+                }), 403
+
+            return fn(*args, **kwargs)
+
+        return decorated
+
+    return wrapper

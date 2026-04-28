@@ -18,6 +18,7 @@ from app.services.auth_service import (
 
 from app.utils.response import success_response, error_response
 from app.services.auth_service import logout_all_sessions,login_user
+from app.utils.decorators import protected
 from app.models.session import ClientSession
 from app.models.user import Client
 from app.extensions import db
@@ -67,7 +68,7 @@ def login():
         data.get("email"),
         data.get("password")
     )
-
+    
     if error:
         return error_response(error, 401, error)
 
@@ -142,6 +143,7 @@ def refresh_token():
 
 @auth_bp.route("/logout", methods=["POST"])
 @jwt_required()
+@protected("CHAT_SEND")
 def logout():
     try:
         data = request.get_json() or {}
@@ -280,6 +282,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 @auth_bp.route("/update-password", methods=["POST"])
 @jwt_required()
+@protected("CHAT_SEND")
 def update_password():
     try:
         client_uuid = get_jwt_identity()

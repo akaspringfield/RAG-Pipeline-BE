@@ -28,27 +28,15 @@ def create_app():
         token = TokenBlacklist.query.filter_by(jti=jti).first()
         return token is not None
 
-
     # ---------------- IMPORT MODELS (SAFE IMPORT) ----------------
     # Import once to register metadata (avoid circular imports carefully)
     with app.app_context():
-        from app.models import user
-        from app.models import auth
-        from app.models import session
-        from app.models import chat
-        from app.models import usage
-        from app.models import role
-        from app.models import acl
-        from app.models import role_mapping
-
-    # ---------------- REGISTER BLUEPRINTS ----------------
-    from app.routes.user import user_bp
-    from app.routes.admin_rbac import admin_rbac_bp
-    from app.routes.auth import auth_bp
-    from app.routes.chat import chat_bp
-    from app.routes.session import session_bp
-    from app.routes.acl import acl_bp
-    from app.routes.admin import admin_bp
+        from app.routes.user import user_bp
+        from app.routes.auth import auth_bp
+        from app.routes.session import session_bp
+        from app.routes.chat import chat_bp
+        from app.routes.admin_rbac import admin_rbac_bp
+        from app.routes.admin import admin_bp
 
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(user_bp, url_prefix="/user")
@@ -56,7 +44,6 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(chat_bp, url_prefix="/chat")
     app.register_blueprint(session_bp, url_prefix="/session")
-    app.register_blueprint(acl_bp, url_prefix="/admin/acl")
 
     # ---------------- SEED DATA (RUN ONLY ON FIRST DEPLOY) ----------------
     import os
@@ -96,20 +83,9 @@ def create_app():
         print("🔥 UNHANDLED ERROR:", str(e))
 
         return error_response(
-            message="Internal server error",
+            message="Internal server error1",
             status=500,
             error_code="INTERNAL_ERROR"
         )
 
     return app
-
-
-# jwt = JWTManager()
-
-# @jwt.token_in_blocklist_loader
-# def check_if_token_revoked(jwt_header, jwt_payload):
-#     jti = jwt_payload["jti"]
-
-#     token = TokenBlacklist.query.filter_by(jti=jti).first()
-
-#     return token is not None

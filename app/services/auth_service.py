@@ -17,7 +17,7 @@ from app.models.usage import ClientUsage
 from app.utils.security import hash_password, verify_password, hash_token
 import secrets
 import uuid
-
+import bcrypt
 from app.models.password_reset import PasswordReset
 from app.models.token_blacklist import TokenBlacklist
 from flask_jwt_extended import create_access_token, create_refresh_token
@@ -111,9 +111,18 @@ def login_user(email, password):
         if not password_row:
             return None, None, "Password not set for user"
 
-        # 🚨🚨🚨 MOST IMPORTANT FIX
-        if not check_password_hash(password_row.password_hash, password):
+        print(password_row.password_hash)
+        print(password)
+
+
+        # 🚨 PASSWORD CHECK (bcrypt version)
+        if not bcrypt.checkpw(
+            password.encode('utf-8'),
+            password_row.password_hash.encode('utf-8')
+        ):
             return None, None, "Invalid email or password"
+
+        print("Login attempt for email---3")
 
         # 3️⃣ generate tokens
         access_token = create_access_token(identity=str(user.uuid))

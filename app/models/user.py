@@ -47,8 +47,8 @@ class ClientPassword(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     created_on = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.UUID(as_uuid=True))
     updated_on = db.Column(db.DateTime)
     updated_by = db.Column(db.UUID(as_uuid=True))
-
 
 

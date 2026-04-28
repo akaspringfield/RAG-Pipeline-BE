@@ -13,7 +13,7 @@ from app.services.rbac_service import has_access
 from app.middleware.protected import protected
 
 from app.services.user_service import list_users
-from app.middleware.rbac import require_acl
+from app.utils.decorators import protected
 
 user_bp = Blueprint("user", __name__)
 
@@ -21,7 +21,7 @@ user_bp = Blueprint("user", __name__)
 # ---------------- LIST USERS (SUPER ADMIN ONLY) ----------------
 @user_bp.route("/all", methods=["GET"])
 @jwt_required()
-@require_acl("USER_READ")
+@protected("CHAT_SEND")
 def all_users():
 
     users = list_users()
@@ -33,14 +33,17 @@ def all_users():
 
 # ---------------- GET PROFILE ----------------
 @user_bp.route("/profile", methods=["GET"])
+@protected("PROFILE_VIEW")
 @jwt_required()
 def get_profile():
     try:
         client_uuid = get_jwt_identity()
         client = Client.query.get(client_uuid)
+        print("🔥 PROFILE 1")
 
         if not client:
             return error_response("User not found", 404, "USER_NOT_FOUND")
+        print("🔥 PROFILE 2")
 
         return success_response(
             data={
@@ -56,9 +59,12 @@ def get_profile():
     except Exception as e:
         print("🔥 PROFILE ERROR:", str(e))
         return error_response("Internal server error", 500, "INTERNAL_ERROR")
-    
+
+
+# ---------------- UPDATE PROFILE ----------------
 @user_bp.route("/profile", methods=["PUT"])
 @jwt_required()
+@protected("CHAT_SEND")
 def update_profile():
     try:
         user_id = get_jwt_identity()

@@ -13,6 +13,7 @@ from app.services.auth_service import (
 )
 from app.utils.response import success_response
 from app.services.session_service import get_active_sessions
+from app.services.session_service import revoke_session_by_uuid
 session_bp = Blueprint("session", __name__)
 
 
@@ -44,6 +45,7 @@ def sessions():
 # ---------------- ACTIVE SESSIONS ----------------
 @session_bp.route("/active", methods=["GET"])
 @jwt_required()
+@protected("USER_READ")
 def active_sessions():
 
     user_id = get_jwt_identity()
@@ -55,13 +57,11 @@ def active_sessions():
         message="Active sessions fetched"
     )
 
-from app.services.session_service import revoke_session_by_uuid
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
 
 # ---------------- REVOKE SINGLE SESSION ----------------
 @session_bp.route("/<session_id>/revoke", methods=["POST"])
 @jwt_required()
+@protected("USER_READ")
 def revoke_single(session_id):
 
     user_id = get_jwt_identity()
