@@ -1,6 +1,5 @@
-import sys
-
 from flask import Flask, app
+import sys
 from app.config import Config
 from app.extensions import db, migrate, jwt
 from app.utils.response import error_response
@@ -23,7 +22,6 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     limiter.init_app(app)
-
 
     # TO BLOCK AFTER LOGOUT
     @jwt.token_in_blocklist_loader
@@ -54,10 +52,25 @@ def create_app():
     app.register_blueprint(admin_dashboard_bp)
 
     # ---------------- SEED DATA (RUN ONLY ON FIRST DEPLOY) ----------------
+    # if os.getenv("SEED_DATA", "false").lower() == "true":
+    #     from app.scripts.seed_data import seed_data
+    #     with app.app_context():
+    #         seed_data()
+
+    from sqlalchemy import inspect
     if os.getenv("SEED_DATA", "false").lower() == "true":
         from app.scripts.seed_data import seed_data
+
         with app.app_context():
-            seed_data()
+            inspector = inspect(db.engine)
+
+            if "client_list" in inspector.get_table_names():
+                seed_data()
+            else:
+                print("⚠️ Skipping seed_data: table 'client_list' does not exist yet")
+
+
+
 
     # ---------------- JWT ERROR HANDLERS ----------------
     @jwt.unauthorized_loader
