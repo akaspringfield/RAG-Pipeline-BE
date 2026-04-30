@@ -48,3 +48,22 @@ def revoke_session_by_uuid(user_uuid, session_uuid):
         "session_id": str(session.uuid),
         "status": "revoked"
     }, None
+
+from app.models.session import ClientSession
+from app.extensions import db
+from datetime import datetime
+
+
+def revoke_all_sessions(user_uuid):
+    sessions = ClientSession.query.filter_by(
+        client_uuid=user_uuid,
+        is_revoked=False
+    ).all()
+
+    for session in sessions:
+        session.is_revoked = True
+        session.updated_at = datetime.utcnow()
+
+    db.session.commit()
+
+    return True

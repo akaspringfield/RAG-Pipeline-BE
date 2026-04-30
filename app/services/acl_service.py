@@ -3,7 +3,7 @@ Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
 
-from app.models.acl import ClientACL
+from app.models.role import ClientACL
 
 
 def list_all_acls():

@@ -24,6 +24,7 @@ from app.models.user import Client
 from app.extensions import db
 from app.models.token_blacklist import TokenBlacklist
 from datetime import datetime
+from app.audit_logs.constants import *
 auth_bp = Blueprint("auth", __name__)
 
 

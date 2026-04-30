@@ -10,6 +10,7 @@ from app.services.chat_service import create_chat, send_message
 from app.utils.response import success_response, error_response
 from app.constants.error_codes import ERROR_MAP
 from app.utils.decorators import protected
+from app.audit_logs.constants import *
 
 chat_bp = Blueprint("chat", __name__)
 

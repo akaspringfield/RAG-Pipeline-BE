@@ -1,5 +1,10 @@
-# app/models/role.py
-import uuid
+'''
+Author : Akash Mambally
+GitHub: https://github.com/akaspringfield
+'''
+
+import uuid 
+from datetime import datetime, timedelta
 from app.extensions import db
 
 
@@ -20,8 +25,6 @@ class ClientACL(db.Model):
     created_by = db.Column(db.UUID(as_uuid=True))
     updated_on = db.Column(db.DateTime)
     updated_by = db.Column(db.UUID(as_uuid=True))
-
-
 
 
 # ===============================

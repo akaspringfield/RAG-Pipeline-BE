@@ -4,23 +4,22 @@ GitHub: https://github.com/akaspringfield
 '''
 
 from app.models.user import Client
-from app.models.client_acl import ClientACL 
+from app.models.role import ClientACL 
 
 
 def list_all_users():
 
     users = Client.query.all()
 
-    return [
-        {
-            "uuid": str(u.uuid),
-            "name": u.client_name,
-            "email": u.client_email,
-            "status": u.client_status,
-            "role_uuid": str(u.role_uuid) if u.role_uuid else None
-        }
-        for u in users
-    ]
+    data = [{
+        "uuid": str(u.uuid),
+        "name": u.client_name,
+        "email": u.client_email,
+        "status": u.client_status,
+        "created_on": u.created_on.isoformat() if u.created_on else None
+    } for u in users]
+
+    return data
 
 def list_all_acls():
 

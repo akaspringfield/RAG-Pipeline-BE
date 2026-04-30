@@ -1,0 +1,88 @@
+# =====================================
+# AUTH EVENTS
+# =====================================
+LOGIN_SUCCESS = "LOGIN_SUCCESS"
+LOGIN_FAILED = "LOGIN_FAILED"
+LOGOUT = "LOGOUT"
+
+# =====================================
+# USER EVENTS
+# =====================================
+USER_LIST_ALL = "USER_LIST_ALL"
+USER_VIEW = "USER_VIEW"
+USER_CREATED = "USER_CREATED"
+USER_UPDATED = "USER_UPDATED"
+USER_ACTIVATED = "USER_ACTIVATED"
+USER_DEACTIVATED = "USER_DEACTIVATED"
+USER_DELETED = "USER_DELETED"
+
+# =========================================================
+# RBAC AUDIT EVENTS (ADD THIS)
+# =========================================================
+
+ROLE_PERMISSION_ASSIGNED = "ROLE_PERMISSION_ASSIGNED"
+ROLE_PERMISSION_UPDATED = "ROLE_PERMISSION_UPDATED"
+ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED"
+ROLE_PERMISSION_VIEW = "ROLE_PERMISSION_VIEW"
+ROLE_PERMISSION_LIST = "ROLE_PERMISSION_LIST"
+
+
+# =====================================
+# ROLE EVENTS
+# =====================================
+ROLE_ASSIGNED = "ROLE_ASSIGNED"
+ROLE_REMOVED = "ROLE_REMOVED"
+RBAC_ROLE_ACL_ASSIGNED = "RBAC_ROLE_ACL_ASSIGNED"
+RBAC_ROLE_ACL_UPDATED = "RBAC_ROLE_ACL_UPDATED"
+RBAC_ROLE_ACL_REMOVED = "RBAC_ROLE_ACL_REMOVED"
+RBAC_ROLE_ACL_VIEWED = "RBAC_ROLE_ACL_VIEWED"
+RBAC_ROLE_ACL_LISTED = "RBAC_ROLE_ACL_LISTED"
+
+
+# =====================================
+# PERMISSION EVENTS
+# =====================================
+ACCESS_DENIED = "ACCESS_DENIED"
+
+# =====================================
+# SESSION EVENTS
+# =====================================
+SESSION_LISTED = "SESSION_LISTED"
+SESSION_REVOKED = "SESSION_REVOKED"
+ALL_SESSIONS_REVOKED = "ALL_SESSIONS_REVOKED"
+
+# =====================================
+# ADMIN SECURITY EVENTS
+# =====================================
+ADMIN_LOGOUT_USER_ALL_SESSIONS = "ADMIN_LOGOUT_USER_ALL_SESSIONS"
+ADMIN_LOGOUT_USER_SESSION = "ADMIN_LOGOUT_USER_SESSION"
+
+# =====================================
+# ACL EVENTS
+# =====================================
+ACL_LISTED = "ACL_LISTED"
+ACL_VIEWED = "ACL_VIEWED"
+ACL_CREATED = "ACL_CREATED"
+ACL_UPDATED = "ACL_UPDATED"
+ACL_DELETED = "ACL_DELETED"
+
+# =====================================
+# ROLE ↔ ACL EVENTS (RBAC CORE)
+# =====================================
+ROLE_ACL_LISTED = "ROLE_ACL_LISTED"
+ROLE_ACL_VIEWED = "ROLE_ACL_VIEWED"
+ROLE_ACL_ASSIGNED = "ROLE_ACL_ASSIGNED"
+ROLE_ACL_UPDATED = "ROLE_ACL_UPDATED"
+ROLE_ACL_REMOVED = "ROLE_ACL_REMOVED"
+
+
+# =====================================
+# USER ↔ ROLE EVENTS (RBAC CORE)
+# =====================================
+USER_ROLE_LISTED = "USER_ROLE_LISTED"
+USER_ROLE_VIEWED = "USER_ROLE_VIEWED"
+USER_ROLE_UPDATED = "USER_ROLE_UPDATED"
+
+# DASHBOARD EVENTS
+DASHBOARD_VIEW = "DASHBOARD_VIEW"
+

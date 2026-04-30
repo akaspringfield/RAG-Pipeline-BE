@@ -7,7 +7,7 @@ from app.utils.response import error_response
 from werkzeug.exceptions import HTTPException
 from flask_jwt_extended import JWTManager
 from app.models.token_blacklist import TokenBlacklist
-
+import os
 
 jwt = JWTManager()
 
@@ -37,30 +37,23 @@ def create_app():
         from app.routes.chat import chat_bp
         from app.routes.admin_rbac import admin_rbac_bp
         from app.routes.admin import admin_bp
+        from app.routes.admin_audit import admin_audit_bp
+        from app.routes.admin_dashboard import admin_dashboard_bp
 
-    app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(user_bp, url_prefix="/user")
-    app.register_blueprint(admin_rbac_bp, url_prefix="/admin/rbac")
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(session_bp)
     app.register_blueprint(chat_bp, url_prefix="/chat")
-    app.register_blueprint(session_bp, url_prefix="/session")
+    app.register_blueprint(admin_rbac_bp, url_prefix="/rbac")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(admin_audit_bp)
+    app.register_blueprint(admin_dashboard_bp)
 
     # ---------------- SEED DATA (RUN ONLY ON FIRST DEPLOY) ----------------
-    # if (
-    #     os.getenv("SEED_DATA") == "true"
-    #     and "flask" not in sys.argv[0]   # 🔥 prevents during CLI
-    # ):
-    #     from app.scripts.seed_data import seed_data
-    #     with app.app_context():
-    #         seed_data()
-
-    import os
-
     if os.getenv("SEED_DATA", "false").lower() == "true":
         from app.scripts.seed_data import seed_data
         with app.app_context():
             seed_data()
-
 
     # ---------------- JWT ERROR HANDLERS ----------------
     @jwt.unauthorized_loader

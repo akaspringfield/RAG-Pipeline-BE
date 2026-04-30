@@ -10,11 +10,12 @@ from app.models.user import Client
 from app.extensions import db
 from app.utils.response import success_response, error_response
 from app.services.rbac_service import has_access
-from app.middleware.protected import protected
 
 from app.services.user_service import list_users
 from app.utils.decorators import protected
-
+from app.audit_logs.decorator import audit
+from app.audit_logs.constants import USER_UPDATED
+from app.audit_logs.constants import *
 user_bp = Blueprint("user", __name__)
 
 
@@ -22,6 +23,7 @@ user_bp = Blueprint("user", __name__)
 @user_bp.route("/all", methods=["GET"])
 @jwt_required()
 @protected("CHAT_SEND")
+@audit(USER_UPDATED, "USER", "UPDATE")
 def all_users():
 
     users = list_users()

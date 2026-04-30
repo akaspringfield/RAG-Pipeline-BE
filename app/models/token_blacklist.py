@@ -3,8 +3,10 @@ Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
 
-from datetime import datetime
+import uuid 
+from datetime import datetime, timedelta
 from app.extensions import db
+
 
 class TokenBlacklist(db.Model):
     __tablename__ = "token_blacklist"

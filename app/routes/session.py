@@ -14,6 +14,7 @@ from app.services.auth_service import (
 from app.utils.response import success_response
 from app.services.session_service import get_active_sessions
 from app.services.session_service import revoke_session_by_uuid
+from app.audit_logs.constants import *
 session_bp = Blueprint("session", __name__)
 
 

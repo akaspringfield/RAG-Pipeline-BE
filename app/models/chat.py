@@ -3,10 +3,9 @@ Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
 
-import uuid
-from datetime import datetime
+import uuid 
+from datetime import datetime, timedelta
 from app.extensions import db
-from app.models.user import Client
 
 
 class ChatHistory(db.Model):

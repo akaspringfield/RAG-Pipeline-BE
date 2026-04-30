@@ -2,14 +2,24 @@
 Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
-
-from flask import Blueprint, request
+# =========================================================
+# RABC MANAGEMENT
+# admin_rbac.py
+#  ├── ACL management
+#  ├── Role management
+#  └── Role ↔ ACL mapping
+# =========================================================
+from flask import Blueprint, request, jsonify
 from datetime import datetime
 import uuid
 
+from flask_jwt_extended import jwt_required
+from sqlalchemy import and_
+
 from app.middleware.protected import protected
-from app.utils.response import success_response, error_response
 from app.extensions import db
+from app.utils.response import success_response, error_response
+from app.models.user import (Client)
 
 from app.models.role import (
     ClientACL,
@@ -17,15 +27,22 @@ from app.models.role import (
     RoleACLMapping,
     ClientRoleMapping
 )
-from app.models.user import Client
 
+from app.audit_logs.decorator import audit
+from app.audit_logs.constants import *
+
+# admin_rbac_bp = Blueprint(
+#     "admin_rbac",
+#     __name__,
+#     url_prefix="/api/admin/rbac"
+# )
 admin_rbac_bp = Blueprint("admin_rbac", __name__)
 
-# =========================================================
-# ACL MANAGEMENT
-# =========================================================
 
-@admin_rbac_bp.route("/acl", methods=["POST"])
+# =========================================================
+# CREATE ACL
+# =========================================================
+@admin_rbac_bp.route("/admin/acls", methods=["POST"])
 @protected("RBAC_MANAGE")
 def create_acl():
     data = request.get_json()
@@ -52,41 +69,92 @@ def create_acl():
     return success_response({"acl_uuid": str(acl.uuid)}, "ACL created")
 
 
-@admin_rbac_bp.route("/acls", methods=["GET"])
+# =========================================================
+# LIST ALL ACL
+# =========================================================
+@admin_rbac_bp.route("/admin/acls", methods=["GET"])
 @protected("RBAC_MANAGE")
 def get_acls():
     acls = ClientACL.query.all()
 
-    data = [
+    return success_response(
+        data=[
         {
             "uuid": str(a.uuid),
             "acl_key": a.acl_key,
-            "title": a.acl_title
-        } for a in acls
-    ]
+            "title": a.acl_title,
+            "status": a.status
+        }
+        for a in acls
+        ],
+        message="ACLs fetched successfully"
+    )
 
-    return success_response(data=data)
 
-
-@admin_rbac_bp.route("/acl/<acl_uuid>", methods=["DELETE"])
+# =========================================================
+# REMOVE ACL
+# =========================================================
+@admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["DELETE"])
 @protected("RBAC_MANAGE")
-def delete_acl(acl_uuid):
-    acl = ClientACL.query.filter_by(uuid=acl_uuid).first()
+def delete_acl(acl_id):
+    acl = ClientACL.query.filter_by(uuid=acl_id).first()
     if not acl:
         return error_response("ACL not found",404,"ACL_NOT_FOUND")
 
-    RoleACLMapping.query.filter_by(acl_uuid=acl_uuid).delete()
-    db.session.delete(acl)
+    # soft delete
+    acl.status = "inactive"
+    acl.updated_on = datetime.utcnow()
+
     db.session.commit()
 
-    return success_response(message="ACL deleted")
+    return success_response(message="ACL deactivated")
 
 
 # =========================================================
-# ROLE MANAGEMENT
+# LIST SINGLE ACL
 # =========================================================
+@admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["GET"])
+@protected("RBAC_MANAGE")
+def get_single_acl(acl_id):
+    acl = ClientACL.query.filter_by(uuid=acl_id).first()
+    if not acl:
+        return error_response("ACL not found",404,"ACL_NOT_FOUND")
 
-@admin_rbac_bp.route("/role", methods=["POST"])
+    return success_response(data={
+        "uuid": str(acl.uuid),
+        "acl_key": acl.acl_key,
+        "acl_title": acl.acl_title,
+        "acl_description": acl.acl_description,
+        "status": acl.status
+    })
+
+
+# =========================================================
+# UPDATE ACL
+# =========================================================
+@admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["PUT"])
+@protected("RBAC_MANAGE")
+def update_acl(acl_id):
+    acl = ClientACL.query.filter_by(uuid=acl_id).first()
+    if not acl:
+        return error_response("ACL not found",404,"ACL_NOT_FOUND")
+
+    data = request.get_json()
+
+    acl.acl_title = data.get("acl_title", acl.acl_title)
+    acl.acl_description = data.get("acl_description", acl.acl_description)
+    acl.status = data.get("status", acl.status)
+    acl.updated_on = datetime.utcnow()
+
+    db.session.commit()
+
+    return success_response(message="ACL updated")
+
+
+# =========================================================
+# CREATE ROLE 
+# =========================================================
+@admin_rbac_bp.route("/admin/roles", methods=["POST"])
 @protected("RBAC_MANAGE")
 def create_role():
     data = request.get_json()
@@ -108,7 +176,10 @@ def create_role():
     return success_response({"role_uuid": str(role.uuid)}, "Role created")
 
 
-@admin_rbac_bp.route("/roles", methods=["GET"])
+# =========================================================
+# LIST ALL ROLES
+# =========================================================
+@admin_rbac_bp.route("/admin/roles", methods=["GET"])
 @protected("RBAC_MANAGE")
 def get_roles():
     roles = ClientRole.query.all()
@@ -124,127 +195,67 @@ def get_roles():
     return success_response(data=data)
 
 
-@admin_rbac_bp.route("/role/<role_uuid>", methods=["DELETE"])
+# =========================================================
+# VIEW ROLE
+# =========================================================
+@admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["GET"])
 @protected("RBAC_MANAGE")
-def delete_role(role_uuid):
-    role = ClientRole.query.filter_by(uuid=role_uuid).first()
+def get_single_role(role_id):
+    role = ClientRole.query.filter_by(uuid=role_id).first()
     if not role:
         return error_response("Role not found",404,"ROLE_NOT_FOUND")
 
-    RoleACLMapping.query.filter_by(role_uuid=role_uuid).delete()
-    ClientRoleMapping.query.filter_by(role_uuid=role_uuid).delete()
-
-    db.session.delete(role)
-    db.session.commit()
-
-    return success_response(message="Role deleted")
-
-
-# =========================================================
-# ROLE ↔ ACL MAPPING
-# =========================================================
-
-@admin_rbac_bp.route("/role/assign-acl", methods=["POST"])
-@protected("RBAC_MANAGE")
-def assign_acl_to_role():
-    data = request.get_json()
-
-    mapping = RoleACLMapping(
-        uuid=uuid.uuid4(),
-        role_uuid=data.get("role_uuid"),
-        acl_uuid=data.get("acl_uuid"),
-        created_on=datetime.utcnow()
-    )
-
-    db.session.add(mapping)
-    db.session.commit()
-
-    return success_response(message="ACL assigned to role")
-
-
-@admin_rbac_bp.route("/role/remove-acl", methods=["POST"])
-@protected("RBAC_MANAGE")
-def remove_acl_from_role():
-    data = request.get_json()
-
-    mapping = RoleACLMapping.query.filter_by(
-        role_uuid=data.get("role_uuid"),
-        acl_uuid=data.get("acl_uuid")
-    ).first()
-
-    if not mapping:
-        return error_response("Mapping not found",404,"MAPPING_NOT_FOUND")
-
-    db.session.delete(mapping)
-    db.session.commit()
-
-    return success_response(message="ACL removed from role")
+    return success_response(data={
+        "uuid": str(role.uuid),
+        "role_name": role.role_name,
+        "role_description": role.role_description,
+        "status": role.status
+    })
 
 
 # =========================================================
-# USER ↔ ROLE MAPPING
+# UPDATE ROLE
 # =========================================================
-
-@admin_rbac_bp.route("/user/assign-role", methods=["POST"])
+@admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["PUT"])
 @protected("RBAC_MANAGE")
-def assign_role_to_user():
+def update_role(role_id):
+    role = ClientRole.query.filter_by(uuid=role_id).first()
+    if not role:
+        return error_response("Role not found",404,"ROLE_NOT_FOUND")
+
     data = request.get_json()
 
-    user = Client.query.filter_by(uuid=data.get("client_uuid")).first()
-    if not user:
-        return error_response("User not found",404,"USER_NOT_FOUND")
+    role.role_name = data.get("role_name", role.role_name)
+    role.role_description = data.get("role_description", role.role_description)
+    role.status = data.get("status", role.status)
+    role.updated_on = datetime.utcnow()
 
-    mapping = ClientRoleMapping(
-        uuid=uuid.uuid4(),
-        client_uuid=data.get("client_uuid"),
-        role_uuid=data.get("role_uuid"),
-        status="active",
-        created_on=datetime.utcnow()
-    )
-
-    db.session.add(mapping)
     db.session.commit()
 
-    return success_response(message="Role assigned to user")
+    return success_response(message="Role updated")
 
 
-@admin_rbac_bp.route("/user/remove-role", methods=["POST"])
+# =========================================================
+# REMOVE ROLE
+# =========================================================
+@admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["DELETE"])
 @protected("RBAC_MANAGE")
-def remove_role_from_user():
-    data = request.get_json()
+def delete_role(role_id):
+    role = ClientRole.query.filter_by(uuid=role_id).first()
+    if not role:
+        return error_response("Role not found",404,"ROLE_NOT_FOUND")
 
-    mapping = ClientRoleMapping.query.filter_by(
-        client_uuid=data.get("client_uuid"),
-        role_uuid=data.get("role_uuid")
-    ).first()
+    role.status = "inactive"
+    role.updated_on = datetime.utcnow()
 
-    if not mapping:
-        return error_response("Mapping not found",404,"MAPPING_NOT_FOUND")
-
-    db.session.delete(mapping)
     db.session.commit()
 
-    return success_response(message="Role removed from user")
-
-
-@admin_rbac_bp.route("/user/<client_uuid>/roles", methods=["GET"])
-@protected("RBAC_MANAGE")
-def get_user_roles(client_uuid):
-    mappings = ClientRoleMapping.query.filter_by(client_uuid=client_uuid).all()
-    role_ids = [m.role_uuid for m in mappings]
-
-    roles = ClientRole.query.filter(ClientRole.uuid.in_(role_ids)).all()
-
-    return success_response(data=[
-        {"role_uuid": str(r.uuid), "role_name": r.role_name}
-        for r in roles
-    ])
+    return success_response(message="Role deactivated")
 
 
 # =========================================================
 # DASHBOARD SUMMARY
 # =========================================================
-
 @admin_rbac_bp.route("/summary", methods=["GET"])
 @protected("RBAC_MANAGE")
 def rbac_summary():
@@ -254,3 +265,202 @@ def rbac_summary():
         "acls": ClientACL.query.count(),
         "role_assignments": ClientRoleMapping.query.count()
     })
+
+
+# =========================================================
+# LIST ALL ROLE → ACL MAPPING
+# =========================================================
+'''
+GET /api/admin/rbac/role-acl
+'''
+@admin_rbac_bp.route("/role-acl", methods=["GET"])
+@jwt_required()
+@protected("RBAC_MANAGE")
+@audit(ROLE_PERMISSION_LIST, "RBAC", "LIST")
+def list_role_acl():
+
+    roles = ClientRole.query.filter_by(status="active").all()
+    response = []
+
+    for role in roles:
+        mappings = (
+            db.session.query(RoleACLMapping, ClientACL)
+            .join(ClientACL, ClientACL.uuid == RoleACLMapping.acl_uuid)
+            .filter(
+                RoleACLMapping.role_uuid == role.uuid,
+                RoleACLMapping.status == "active"
+            ).all()
+        )
+
+        acl_list = [
+            {
+                "acl_uuid": str(acl.uuid),
+                "acl_key": acl.acl_key,
+                "acl_title": acl.acl_title
+            }
+            for mapping, acl in mappings
+        ]
+
+        response.append({
+            "role_uuid": str(role.uuid),
+            "role_name": role.role_name,
+            "acls": acl_list
+        })
+
+    return jsonify({"success": True, "data": response}), 200
+
+
+# =========================================================
+# VIEW ACLs OF SINGLE ROLE
+# =========================================================
+'''
+GET /role-acl/<role_uuid>/details
+'''
+@admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/details", methods=["GET"])
+@jwt_required()
+@protected("RBAC_MANAGE")
+@audit(ROLE_PERMISSION_VIEW, "RBAC", "VIEW")
+def view_role_acls(role_uuid):
+
+    role = ClientRole.query.get_or_404(role_uuid)
+
+    mappings = (
+        db.session.query(RoleACLMapping, ClientACL)
+        .join(ClientACL, ClientACL.uuid == RoleACLMapping.acl_uuid)
+        .filter(
+            RoleACLMapping.role_uuid == role_uuid,
+            RoleACLMapping.status == "active"
+        ).all()
+    )
+
+    acl_list = [
+        {
+            "acl_uuid": str(acl.uuid),
+            "acl_key": acl.acl_key,
+            "acl_title": acl.acl_title
+        }
+        for mapping, acl in mappings
+    ]
+
+    return jsonify({
+        "success": True,
+        "role": role.role_name,
+        "acls": acl_list
+    }), 200
+
+
+# =========================================================
+# ASSIGN ACLs TO ROLE (ADD NEW)
+# =========================================================
+'''
+POST /role-acl/<role_uuid>/acl
+'''
+@admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/assign", methods=["POST"])
+@jwt_required()
+@protected("RBAC_MANAGE")
+@audit(ROLE_PERMISSION_ASSIGNED, "RBAC", "ASSIGN")
+def assign_acl_to_role(role_uuid):
+
+    ClientRole.query.get_or_404(role_uuid)
+    data = request.get_json()
+    acl_uuids = data.get("acl_uuids", [])
+
+    created_count = 0
+
+    for acl_uuid in acl_uuids:
+        existing = RoleACLMapping.query.filter_by(
+            role_uuid=role_uuid,
+            acl_uuid=acl_uuid
+        ).first()
+
+        if existing:
+            # Reactivate if previously inactive
+            existing.status = "active"
+            existing.updated_by = None
+        else:
+            mapping = RoleACLMapping(
+                role_uuid=role_uuid,
+                acl_uuid=acl_uuid,
+                created_by=None
+            )
+            db.session.add(mapping)
+
+        created_count += 1
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"{created_count} ACL(s) assigned to role"
+    }), 200
+
+
+# =========================================================
+# REPLACE ACLs OF ROLE (FULL UPDATE)
+# =========================================================
+'''
+PUT /role-acl/<role_uuid>/update
+''' 
+@admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/update", methods=["PUT"])
+@jwt_required()
+@protected("RBAC_MANAGE")
+@audit(ROLE_PERMISSION_UPDATED, "RBAC", "UPDATE")
+def replace_role_acls(role_uuid):
+
+    ClientRole.query.get_or_404(role_uuid)
+    data = request.get_json()
+    acl_uuids = data.get("acl_uuids", [])
+
+    # Soft delete all existing mappings
+    RoleACLMapping.query.filter_by(role_uuid=role_uuid).update(
+        {"status": "inactive"}
+    )
+
+    # Insert new mappings
+    for acl_uuid in acl_uuids:
+        mapping = RoleACLMapping(
+            role_uuid=role_uuid,
+            acl_uuid=acl_uuid,
+            created_by=None,
+            status="active"
+        )
+        db.session.add(mapping)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Role ACLs replaced successfully"
+    }), 200
+
+
+# =========================================================
+# REMOVE SINGLE ACL FROM ROLE
+# =========================================================
+'''
+DELETE /role-acl/<role_uuid>/remove/<acl_uuid>
+'''
+@admin_rbac_bp.route(
+    "/role-acl/<uuid:role_uuid>/remove/<uuid:acl_uuid>",
+    methods=["DELETE"]
+)
+@jwt_required()
+@protected("RBAC_MANAGE")
+@audit(ROLE_PERMISSION_REMOVED, "RBAC", "REMOVE")
+def remove_acl_from_role(role_uuid, acl_uuid):
+
+    mapping = RoleACLMapping.query.filter(
+        and_(
+            RoleACLMapping.role_uuid == role_uuid,
+            RoleACLMapping.acl_uuid == acl_uuid,
+            RoleACLMapping.status == "active"
+        )
+    ).first_or_404()
+
+    mapping.status = "inactive"
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "ACL removed from role"
+    }), 200
