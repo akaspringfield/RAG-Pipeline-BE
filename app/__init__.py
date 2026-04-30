@@ -8,6 +8,7 @@ from werkzeug.exceptions import HTTPException
 from flask_jwt_extended import JWTManager
 from app.models.token_blacklist import TokenBlacklist
 import os
+from app.extensions import db, migrate, jwt, bcrypt, limiter
 
 jwt = JWTManager()
 
@@ -20,6 +21,9 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    bcrypt.init_app(app)
+    limiter.init_app(app)
+
 
     # TO BLOCK AFTER LOGOUT
     @jwt.token_in_blocklist_loader

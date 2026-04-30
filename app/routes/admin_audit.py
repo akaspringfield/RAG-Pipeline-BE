@@ -130,6 +130,3 @@ def purge_old_logs():
 
     except Exception as e:
         return error_response(str(e), 500, "AUDIT_PURGE_FAILED")
-    
-
-

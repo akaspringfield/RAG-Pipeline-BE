@@ -2,7 +2,6 @@
 Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
-
 import uuid 
 from datetime import datetime, timedelta
 from app.extensions import db
@@ -13,10 +12,11 @@ class Client(db.Model):
 
     uuid = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     client_name = db.Column(db.String(100))
-    client_email = db.Column(db.String(120), unique=True)
-    client_status = db.Column(db.String(20), default="active")
+    client_email = db.Column(db.String(120), unique=True, index=True)
 
-    created_on = db.Column(db.DateTime, default=datetime.utcnow)
+    client_status = db.Column(db.String(20), default="active", index=True)
+
+    created_on = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     created_by = db.Column(db.UUID(as_uuid=True))
     updated_on = db.Column(db.DateTime)
     updated_by = db.Column(db.UUID(as_uuid=True))

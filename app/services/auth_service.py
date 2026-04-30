@@ -2,7 +2,6 @@
 Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
-
 from datetime import datetime, timedelta
 from flask import request
 from flask_jwt_extended import (

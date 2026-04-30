@@ -2,7 +2,6 @@
 Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
-
 import requests
 from app.config import Config
 

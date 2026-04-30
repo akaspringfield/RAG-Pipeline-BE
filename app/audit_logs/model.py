@@ -7,12 +7,12 @@ class AuditLog(db.Model):
 
     uuid = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    user_uuid = db.Column(db.UUID(as_uuid=True))
-    event_type = db.Column(db.String(100))
+    user_uuid = db.Column(db.UUID(as_uuid=True), index=True)
+    event_type = db.Column(db.String(100), index=True)
     entity_type = db.Column(db.String(100))   # USER / ROLE / AUTH / CHAT
     entity_uuid = db.Column(db.UUID(as_uuid=True))
 
-    action = db.Column(db.String(50))         # CREATE / UPDATE / DELETE / LOGIN
+    action = db.Column(db.String(50), index=True)         # CREATE / UPDATE / DELETE / LOGIN
     description = db.Column(db.Text)
 
     ip_address = db.Column(db.String(100))

@@ -2,9 +2,7 @@
 Author : Akash Mambally
 GitHub: https://github.com/akaspringfield
 '''
-
 from datetime import datetime
-
 from app.extensions import db
 from app.models.user import Client
 from app.models.user import ClientPassword
