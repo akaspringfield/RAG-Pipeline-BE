@@ -8,7 +8,7 @@ from app.utils.response import success_response, error_response
 from app.middleware.protected import protected
 from app.audit_logs.constants import *
 
-admin_audit_bp = Blueprint("admin_audit", __name__, url_prefix="/admin/audit-logs")
+admin_audit_bp = Blueprint("admin_audit", __name__, url_prefix="/api/admin/audit-logs")
 
 
 ''' 

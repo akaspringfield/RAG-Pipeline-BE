@@ -24,7 +24,7 @@ limiter = Limiter(key_func=get_remote_address)
 admin_dashboard_bp = Blueprint(
     "admin_dashboard",
     __name__,
-    url_prefix="/admin/dashboard"
+    url_prefix="/api/admin/dashboard"
 )
 
 # =========================================================

@@ -42,35 +42,28 @@ def create_app():
         from app.routes.admin_audit import admin_audit_bp
         from app.routes.admin_dashboard import admin_dashboard_bp
 
-    app.register_blueprint(user_bp, url_prefix="/user")
-    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(user_bp, url_prefix="/api/user")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(session_bp)
-    app.register_blueprint(chat_bp, url_prefix="/chat")
-    app.register_blueprint(admin_rbac_bp, url_prefix="/rbac")
-    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(chat_bp, url_prefix="/api/chat")
+    app.register_blueprint(admin_rbac_bp, url_prefix="/api/rbac")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(admin_audit_bp)
     app.register_blueprint(admin_dashboard_bp)
 
     # ---------------- SEED DATA (RUN ONLY ON FIRST DEPLOY) ----------------
-    # if os.getenv("SEED_DATA", "false").lower() == "true":
-    #     from app.scripts.seed_data import seed_data
-    #     with app.app_context():
-    #         seed_data()
-
     from sqlalchemy import inspect
     if os.getenv("SEED_DATA", "false").lower() == "true":
-        from app.scripts.seed_data import seed_data
+        from app.scripts.seed_data import seed_data,seed_base_role
 
         with app.app_context():
             inspector = inspect(db.engine)
 
             if "client_list" in inspector.get_table_names():
-                seed_data()
+                admin_user = seed_data()
+                seed_base_role(admin_user)
             else:
                 print("⚠️ Skipping seed_data: table 'client_list' does not exist yet")
-
-
-
 
     # ---------------- JWT ERROR HANDLERS ----------------
     @jwt.unauthorized_loader

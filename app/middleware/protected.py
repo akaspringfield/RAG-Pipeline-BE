@@ -69,6 +69,7 @@ from app.audit_logs.constants import ACCESS_DENIED
 #     return wrapper
 
 def protected(required_permission=None):
+    print("----------------------")
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
@@ -120,6 +121,8 @@ def protected(required_permission=None):
 
                 # ---------------- NO ACL ASSIGNED ----------------
                 if not permissions:
+                    print("🔐 NO PERMISSIONS 1:", required_permission)
+
                     log_event(
                         user_uuid=user_uuid,
                         event_type=ACCESS_DENIED,
@@ -135,6 +138,8 @@ def protected(required_permission=None):
 
                 # ---------------- PERMISSION DENIED ----------------
                 if required_permission not in permissions:
+                    print("🔐 NO PERMISSIONS 2:", required_permission)
+
                     log_event(
                         user_uuid=user_uuid,
                         event_type=ACCESS_DENIED,
@@ -147,6 +152,8 @@ def protected(required_permission=None):
                         403,
                         "FORBIDDEN"
                     )
+                
+                print("🔐 PERMISSIONS ALLOWED:", required_permission)
 
                 # ✅ SUCCESS → allow request
                 return fn(*args, **kwargs)

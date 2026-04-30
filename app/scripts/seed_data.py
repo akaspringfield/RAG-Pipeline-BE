@@ -14,7 +14,6 @@ from app.models.role import (
     ClientRoleMapping
 )
 
-
 # ---------------- CONFIG ----------------
 EMAIL = os.getenv("SUPERADMIN_EMAIL", "superadmin@hochrise.com")
 PASSWORD = os.getenv("SUPERADMIN_PASSWORD", "admin123")
@@ -250,7 +249,87 @@ def seed_data():
 
         db.session.commit()
         print("🚀 SUPER ADMIN FULL SEED COMPLETED")
+        print(f"USER {user.uuid}")
+        return user
 
+    except Exception as e:
+        import traceback
+        print("🔥 SEED ERROR:", repr(e))
+        traceback.print_exc()
+        raise
+
+
+def seed_base_role(admin_user):
+    try:
+        now = datetime.utcnow()
+
+        print("Seeding base_role and minimal permissions...")
+
+        # 1️⃣ Create permissions
+        BASE_LINE_ACL = [
+            ("VIEW_PROFILE", "View profile"),
+            ("UPDATE_PROFILE", "Update profile"),
+            ("LIST_CHAT_HISTORY", "List chat history"),
+            ("VIEW_CHAT", "View chat"),
+            ("CREATE_CHAT", "Create chat"),
+            ("DELETE_CHAT", "Delete chat"),
+            ("MANAGE_CHAT", "Full chat management"),
+        ]
+
+        # -------------------------------------------------------
+        # 2️⃣ ROLE (BASE_LINE_USER)
+        # -------------------------------------------------------
+        role = ClientRole.query.filter_by(role_name="BASE_LINE_USER").first()
+
+        if not role:
+            role = ClientRole(
+                uuid=uuid.uuid4(),
+                role_name="BASE_LINE_USER",
+                role_description="Default role for new users",
+                status="active",
+                created_on=now
+            )
+            db.session.add(role)
+            db.session.flush()
+            db.session.commit()
+            print("✅ role created")
+        else:
+            print("ℹ️ role exists")
+
+        # -------------------------------------------------------
+        # 3️⃣ ROLE ↔ ACL MAPPING (FULL ACCESS)
+        # -------------------------------------------------------
+        
+        # superadmin = Client.query.filter_by(client_email="superadmin@hochrise.com").first()
+
+        for key, desc in BASE_LINE_ACL:
+            #  Fetch ACL from DB
+            acl = ClientACL.query.filter_by(acl_key=key).first()
+
+            if not acl:
+                print(f"⚠️ ACL not found in DB: {key}")
+                continue
+
+            mapping = RoleACLMapping.query.filter_by(
+                role_uuid=role.uuid,
+                acl_uuid=acl.uuid
+            ).first()
+
+            if not mapping:
+                mapping = RoleACLMapping(
+                    uuid=uuid.uuid4(),
+                    role_uuid=role.uuid,
+                    acl_uuid=acl.uuid,
+                    status="active",
+                    created_on=now,
+                    created_by=admin_user.uuid
+                )
+                db.session.add(mapping)
+
+        db.session.commit()
+        print("✅ role_acl_mapping completed")
+
+        print("🚀 BASELINE ROLE SEED COMPLETED")
     except Exception as e:
         import traceback
         print("🔥 SEED ERROR:", repr(e))
@@ -263,4 +342,7 @@ def seed_data():
 if __name__ == "__main__":
     app = create_app()
     with app.app_context():
-        seed_data()
+        admin_user = seed_data()
+        print(f"Seeding base_role begins...{admin_user.uuid}")
+
+        seed_base_role(admin_user)

@@ -21,7 +21,7 @@ from app.models.password_reset import PasswordReset
 from app.models.token_blacklist import TokenBlacklist
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import check_password_hash, generate_password_hash
-
+from app.services.role_service import get_role_by_name, assign_role_to_client
 
 # ---------------- REGISTER ----------------
 def register_user(name, email, password):
@@ -54,6 +54,20 @@ def register_user(name, email, password):
     db.session.add(pwd)
     db.session.add(usage)
     db.session.commit()
+
+    # ---------------------------------------------------
+    # Assign BASE_LINE_USER role automatically
+    # ---------------------------------------------------
+    base_role = get_role_by_name("BASE_LINE_USER")
+
+    if not base_role:
+        raise Exception("BASE_LINE_USER role not found. Did you run seed?")
+
+    x = assign_role_to_client(
+        client_uuid=client.uuid,
+        role_uuid=base_role.uuid
+    )
+    print(f"get client {client.uuid}-- {x}")
 
     return client, None
 
@@ -112,7 +126,6 @@ def login_user(email, password):
 
         print(password_row.password_hash)
         print(password)
-
 
         # 🚨 PASSWORD CHECK (bcrypt version)
         if not bcrypt.checkpw(
