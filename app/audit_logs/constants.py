@@ -5,6 +5,28 @@ LOGIN_SUCCESS = "LOGIN_SUCCESS"
 LOGIN_FAILED = "LOGIN_FAILED"
 LOGOUT = "LOGOUT"
 
+
+# =====================================
+# PERMISSION EVENTS
+# =====================================
+ACCESS_DENIED = "ACCESS_DENIED"
+
+
+# =====================================
+# SESSION EVENTS
+# =====================================
+SESSION_LISTED = "SESSION_LISTED"
+SESSION_REVOKED = "SESSION_REVOKED"
+ALL_SESSIONS_REVOKED = "ALL_SESSIONS_REVOKED"
+
+
+# =====================================
+# ADMIN SECURITY EVENTS
+# =====================================
+ADMIN_LOGOUT_USER_ALL_SESSIONS = "ADMIN_LOGOUT_USER_ALL_SESSIONS"
+ADMIN_LOGOUT_USER_SESSION = "ADMIN_LOGOUT_USER_SESSION"
+
+
 # =====================================
 # USER EVENTS
 # =====================================
@@ -16,46 +38,6 @@ USER_ACTIVATED = "USER_ACTIVATED"
 USER_DEACTIVATED = "USER_DEACTIVATED"
 USER_DELETED = "USER_DELETED"
 
-# =========================================================
-# RBAC AUDIT EVENTS (ADD THIS)
-# =========================================================
-
-ROLE_PERMISSION_ASSIGNED = "ROLE_PERMISSION_ASSIGNED"
-ROLE_PERMISSION_UPDATED = "ROLE_PERMISSION_UPDATED"
-ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED"
-ROLE_PERMISSION_VIEW = "ROLE_PERMISSION_VIEW"
-ROLE_PERMISSION_LIST = "ROLE_PERMISSION_LIST"
-
-
-# =====================================
-# ROLE EVENTS
-# =====================================
-ROLE_ASSIGNED = "ROLE_ASSIGNED"
-ROLE_REMOVED = "ROLE_REMOVED"
-RBAC_ROLE_ACL_ASSIGNED = "RBAC_ROLE_ACL_ASSIGNED"
-RBAC_ROLE_ACL_UPDATED = "RBAC_ROLE_ACL_UPDATED"
-RBAC_ROLE_ACL_REMOVED = "RBAC_ROLE_ACL_REMOVED"
-RBAC_ROLE_ACL_VIEWED = "RBAC_ROLE_ACL_VIEWED"
-RBAC_ROLE_ACL_LISTED = "RBAC_ROLE_ACL_LISTED"
-
-
-# =====================================
-# PERMISSION EVENTS
-# =====================================
-ACCESS_DENIED = "ACCESS_DENIED"
-
-# =====================================
-# SESSION EVENTS
-# =====================================
-SESSION_LISTED = "SESSION_LISTED"
-SESSION_REVOKED = "SESSION_REVOKED"
-ALL_SESSIONS_REVOKED = "ALL_SESSIONS_REVOKED"
-
-# =====================================
-# ADMIN SECURITY EVENTS
-# =====================================
-ADMIN_LOGOUT_USER_ALL_SESSIONS = "ADMIN_LOGOUT_USER_ALL_SESSIONS"
-ADMIN_LOGOUT_USER_SESSION = "ADMIN_LOGOUT_USER_SESSION"
 
 # =====================================
 # ACL EVENTS
@@ -66,6 +48,17 @@ ACL_CREATED = "ACL_CREATED"
 ACL_UPDATED = "ACL_UPDATED"
 ACL_DELETED = "ACL_DELETED"
 
+
+# =========================================================
+# ROLE EVENTS
+# =========================================================
+ROLE_LIST = "ROLE_ACL_LIST"
+ROLE_VIEW = "ROLE_ACL_VIEW"
+ROLE_ASSIGNED = "ROLE_ACL_ASSIGNED"
+ROLE_UPDATED = "ROLE_ACL_UPDATED"
+ROLE_REMOVED = "ROLE_ACL_REMOVED"
+
+
 # =====================================
 # ROLE ↔ ACL EVENTS (RBAC CORE)
 # =====================================
@@ -75,21 +68,20 @@ ROLE_ACL_ASSIGNED = "ROLE_ACL_ASSIGNED"
 ROLE_ACL_UPDATED = "ROLE_ACL_UPDATED"
 ROLE_ACL_REMOVED = "ROLE_ACL_REMOVED"
 
-
 # =====================================
 # USER ↔ ROLE EVENTS (RBAC CORE)
 # =====================================
 USER_ROLE_LISTED = "USER_ROLE_LISTED"
 USER_ROLE_VIEWED = "USER_ROLE_VIEWED"
+USER_ROLE_ASSIGNED = "USER_ROLE_ASSIGNED"
 USER_ROLE_UPDATED = "USER_ROLE_UPDATED"
+USER_ROLE_DELETE = "USER_ROLE_DELETE"
 
-# DASHBOARD EVENTS
-DASHBOARD_VIEW = "DASHBOARD_VIEW"
 
 # =====================================
 # DASHBOARD ANALYTICS EVENTS
 # =====================================
-
+DASHBOARD_VIEW = "DASHBOARD_VIEW"
 DASHBOARD_SUMMARY_VIEWED = "DASHBOARD_SUMMARY_VIEWED"
 DASHBOARD_USER_STATS_VIEWED = "DASHBOARD_USER_STATS_VIEWED"
 DASHBOARD_LOGIN_STATS_VIEWED = "DASHBOARD_LOGIN_STATS_VIEWED"
@@ -108,7 +100,6 @@ ADMIN_DATA_EXPORTED = "ADMIN_DATA_EXPORTED"
 # =====================================
 # REPORTING EVENTS
 # =====================================
-
 REPORT_GENERATED = "REPORT_GENERATED"
 AUDIT_LOG_EXPORTED = "AUDIT_LOG_EXPORTED"
 USER_DATA_EXPORTED = "USER_DATA_EXPORTED"

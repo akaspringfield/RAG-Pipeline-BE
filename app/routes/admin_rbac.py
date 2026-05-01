@@ -31,11 +31,7 @@ from app.models.role import (
 from app.audit_logs.decorator import audit
 from app.audit_logs.constants import *
 
-# admin_rbac_bp = Blueprint(
-#     "admin_rbac",
-#     __name__,
-#     url_prefix="/api/admin/rbac"
-# )
+
 admin_rbac_bp = Blueprint("admin_rbac", __name__)
 
 
@@ -43,7 +39,8 @@ admin_rbac_bp = Blueprint("admin_rbac", __name__)
 # CREATE ACL
 # =========================================================
 @admin_rbac_bp.route("/admin/acls", methods=["POST"])
-@protected("RBAC_MANAGE")
+@protected("CREATE_ACL")
+@audit("ACL_CREATED", "ACL", "CREATED")
 def create_acl():
     data = request.get_json()
 
@@ -73,7 +70,8 @@ def create_acl():
 # LIST ALL ACL
 # =========================================================
 @admin_rbac_bp.route("/admin/acls", methods=["GET"])
-@protected("RBAC_MANAGE")
+@protected("LIST_ACL")
+@audit("ACL_LISTED", "ACL", "LISTED")
 def get_acls():
     acls = ClientACL.query.all()
 
@@ -95,7 +93,8 @@ def get_acls():
 # REMOVE ACL
 # =========================================================
 @admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["DELETE"])
-@protected("RBAC_MANAGE")
+@protected("DELETE_ACL")
+@audit("ACL_DELETED", "ACL", "REMOVE")
 def delete_acl(acl_id):
     acl = ClientACL.query.filter_by(uuid=acl_id).first()
     if not acl:
@@ -114,7 +113,8 @@ def delete_acl(acl_id):
 # LIST SINGLE ACL
 # =========================================================
 @admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["GET"])
-@protected("RBAC_MANAGE")
+@protected("ACL_VIEWED")
+@audit("ROLE_REMOVED", "ROLE", "REMOVED")
 def get_single_acl(acl_id):
     acl = ClientACL.query.filter_by(uuid=acl_id).first()
     if not acl:
@@ -133,7 +133,8 @@ def get_single_acl(acl_id):
 # UPDATE ACL
 # =========================================================
 @admin_rbac_bp.route("/admin/acls/<uuid:acl_id>", methods=["PUT"])
-@protected("RBAC_MANAGE")
+@protected("ACL_UPDATED")
+@audit("UPDATE_ACL", "UPDATE", "UPDATE")
 def update_acl(acl_id):
     acl = ClientACL.query.filter_by(uuid=acl_id).first()
     if not acl:
@@ -155,7 +156,8 @@ def update_acl(acl_id):
 # CREATE ROLE 
 # =========================================================
 @admin_rbac_bp.route("/admin/roles", methods=["POST"])
-@protected("RBAC_MANAGE")
+@protected("ACL_CREATED")
+@audit("CREATE_ACL", "ACL", "CREATE")
 def create_role():
     data = request.get_json()
 
@@ -180,7 +182,8 @@ def create_role():
 # LIST ALL ROLES
 # =========================================================
 @admin_rbac_bp.route("/admin/roles", methods=["GET"])
-@protected("RBAC_MANAGE")
+@protected("LIST_ROLE")
+@audit("ROLE_LIST", "ROLE", "LIST")
 def get_roles():
     roles = ClientRole.query.all()
 
@@ -199,7 +202,8 @@ def get_roles():
 # VIEW ROLE
 # =========================================================
 @admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["GET"])
-@protected("RBAC_MANAGE")
+@protected("VIEW_ROLE")
+@audit("ROLE_VIEW", "ROLE", "VIEW")
 def get_single_role(role_id):
     role = ClientRole.query.filter_by(uuid=role_id).first()
     if not role:
@@ -217,7 +221,8 @@ def get_single_role(role_id):
 # UPDATE ROLE
 # =========================================================
 @admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["PUT"])
-@protected("RBAC_MANAGE")
+@protected("UPDATE_ROLE")
+@audit("ROLE_UPDATED", "ROLE", "UPDATED")
 def update_role(role_id):
     role = ClientRole.query.filter_by(uuid=role_id).first()
     if not role:
@@ -239,7 +244,8 @@ def update_role(role_id):
 # REMOVE ROLE
 # =========================================================
 @admin_rbac_bp.route("/admin/roles/<uuid:role_id>", methods=["DELETE"])
-@protected("RBAC_MANAGE")
+@protected("DELETE_ROLE")
+@audit("ROLE_REMOVED", "ROLE", "REMOVED")
 def delete_role(role_id):
     role = ClientRole.query.filter_by(uuid=role_id).first()
     if not role:
@@ -257,7 +263,8 @@ def delete_role(role_id):
 # DASHBOARD SUMMARY
 # =========================================================
 @admin_rbac_bp.route("/summary", methods=["GET"])
-@protected("RBAC_MANAGE")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_SUMMARY_VIEWED", "SUMMARY", "VIEW")
 def rbac_summary():
     return success_response(data={
         "users": Client.query.count(),
@@ -275,8 +282,8 @@ GET /api/admin/rbac/role-acl
 '''
 @admin_rbac_bp.route("/role-acl", methods=["GET"])
 @jwt_required()
-@protected("RBAC_MANAGE")
-@audit(ROLE_PERMISSION_LIST, "RBAC", "LIST")
+@protected("LIST_ACL_ROLE")
+@audit("ROLE_ACL_LISTED", "ACL-ROLE", "LIST")
 def list_role_acl():
 
     roles = ClientRole.query.filter_by(status="active").all()
@@ -318,8 +325,8 @@ GET /role-acl/<role_uuid>/details
 '''
 @admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/details", methods=["GET"])
 @jwt_required()
-@protected("RBAC_MANAGE")
-@audit(ROLE_PERMISSION_VIEW, "RBAC", "VIEW")
+@protected("VIEW_ACL_ROLE")
+@audit("ROLE_ACL_VIEWED", "ACL-ROLE", "VIEW")
 def view_role_acls(role_uuid):
 
     role = ClientRole.query.get_or_404(role_uuid)
@@ -357,8 +364,8 @@ POST /role-acl/<role_uuid>/acl
 '''
 @admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/assign", methods=["POST"])
 @jwt_required()
-@protected("RBAC_MANAGE")
-@audit(ROLE_PERMISSION_ASSIGNED, "RBAC", "ASSIGN")
+@protected("ASSIGN_ACL_ROLE")
+@audit("ROLE_ACL_ASSIGNED", "ACL-ROLE", "ASSIGN")
 def assign_acl_to_role(role_uuid):
 
     ClientRole.query.get_or_404(role_uuid)
@@ -403,8 +410,8 @@ PUT /role-acl/<role_uuid>/update
 ''' 
 @admin_rbac_bp.route("/role-acl/<uuid:role_uuid>/update", methods=["PUT"])
 @jwt_required()
-@protected("RBAC_MANAGE")
-@audit(ROLE_PERMISSION_UPDATED, "RBAC", "UPDATE")
+@protected("UPDATE_ACL_ROLE")
+@audit("ROLE_ACL_UPDATED", "ACL-ROLE", "UPDATE")
 def replace_role_acls(role_uuid):
 
     ClientRole.query.get_or_404(role_uuid)
@@ -445,8 +452,8 @@ DELETE /role-acl/<role_uuid>/remove/<acl_uuid>
     methods=["DELETE"]
 )
 @jwt_required()
-@protected("RBAC_MANAGE")
-@audit(ROLE_PERMISSION_REMOVED, "RBAC", "REMOVE")
+@protected("REMOVE_ACL_ROLE")
+@audit("ROLE_ACL_REMOVED", "ACL-ROLE", "REMOVE")
 def remove_acl_from_role(role_uuid, acl_uuid):
 
     mapping = RoleACLMapping.query.filter(

@@ -112,6 +112,10 @@ ACL_LIST = [
     ("VIEW_AUDIT_ACTIVITY", "View audit activity analytics"),
     ("VIEW_DASHBOARD", "View admin dashboard"),
     ("VIEW_AUDIT_LOGS", "View audit logs"),
+    ("ADMIN_DASHBOARD1", "View dashboard summary"),
+    ("ADMIN_DASHBOARD_AUDIT", "View dashboard audit"),
+    ("CLIENT_DASHBOARD1", "View dashboard summary"),
+    ("CLIENT_DASHBOARD_AUDIT", "View dashboard audit"),
 ]
 
 
@@ -274,6 +278,8 @@ def seed_base_role(admin_user):
             ("CREATE_CHAT", "Create chat"),
             ("DELETE_CHAT", "Delete chat"),
             ("MANAGE_CHAT", "Full chat management"),
+            ("CLIENT_DASHBOARD1", "View dashboard summary"),
+            ("CLIENT_DASHBOARD_AUDIT", "View dashboard audit"),
         ]
 
         # -------------------------------------------------------

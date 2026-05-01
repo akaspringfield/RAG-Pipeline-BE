@@ -28,9 +28,6 @@ from app.services.session_service import (
     revoke_session_by_uuid
 )
 
-from app.audit_logs.decorator import audit
-from app.audit_logs.constants import *
-
 from app.services.admin_service import (
     list_all_users,
     list_all_acls,
@@ -56,8 +53,8 @@ GET /admin/users
 '''
 @admin_bp.route("/users", methods=["GET"])
 @jwt_required()
-@protected("USER_READ")
-@audit(USER_LIST_ALL, "USER", "UPDATE")
+@protected("LIST_USERS")
+@audit("USER_LIST_ALL", "USER", "UPDATE")
 def list_users():
     users = Client.query.all()
 
@@ -79,8 +76,8 @@ def list_users():
 # =========================================================
 @admin_bp.route("/users/<uuid:user_id>", methods=["GET"])
 @jwt_required()
-@protected("USER_READ")
-@audit(USER_VIEW, "USER", "VIEW")
+@protected("VIEW_USER")
+@audit("USER_VIEW", "USER", "VIEW")
 def get_user(user_id):
     user = Client.query.get_or_404(user_id)
 
@@ -101,8 +98,8 @@ PUT /admin/users/<id>
 '''
 @admin_bp.route("/users/<uuid:user_id>", methods=["PUT"])
 @jwt_required()
-@protected("USER_UPDATE")
-@audit(USER_UPDATED, "USER", "UPDATE")
+@protected("UPDATE_USER")
+@audit("USER_UPDATED", "USER", "UPDATE")
 def update_user(user_id):
     user = Client.query.get_or_404(user_id)
     data = request.json
@@ -117,7 +114,7 @@ def update_user(user_id):
 
 
 # =========================================================
-# DELETE USER
+# DEACTIVATE USER
 # =========================================================
 '''
 DELETE /admin/users/<id>
@@ -126,8 +123,8 @@ None
 '''
 @admin_bp.route("/users/<uuid:user_id>", methods=["DELETE"])
 @jwt_required()
-@protected("USER_DELETE")
-@audit(USER_DELETED, "USER", "DELETE")
+@protected("DEACTIVATE_USER")
+@audit("USER_DEACTIVATED", "USER", "DEACTIVATE")
 def deactivate_user(user_id):
     user = Client.query.get_or_404(user_id)
     user.client_status = "inactive"
@@ -146,8 +143,8 @@ Body:
 None
 '''
 @admin_bp.route("/admin/users/<uuid:user_id>/activate", methods=["PUT"])
-@audit(USER_ACTIVATED, "USER", "ACTIVATED")
-@protected("USER_ACTIVATE")
+@audit("USER_ACTIVATED", "USER", "ACTIVATED")
+@protected("ACTIVATE_USER")
 @jwt_required()
 def activate_user(user_id):
     try:
@@ -182,13 +179,13 @@ POST /admin/users/<uuid>/logout-all
 '''
 @admin_bp.route("/admin/users/<uuid:user_id>/logout-all", methods=["POST"])
 @audit("ADMIN_LOGOUT_ALL_SESSIONS", "USER", "SUCCESS")
-@protected("USER_UPDATE")
+@protected("LOGOUT_ALL_USERS")
 @jwt_required()
 def admin_logout_all_sessions(user_id):
 
     revoke_all_sessions(user_id)
 
-    return success_response(message="All sessions revoked")
+    return success_response(message="All user sessions revoked")
 
 
 # =========================================================
@@ -202,7 +199,7 @@ POST /admin/users/<uuid>/sessions/<session_uuid>/revoke
     methods=["POST"]
 )
 @audit("ADMIN_LOGOUT_SINGLE_SESSION", "USER", "SUCCESS")
-@protected("USER_UPDATE")
+@protected("LOGOUT_SINGLE_USER")
 @jwt_required()
 def admin_logout_single_session(user_id, session_id):
 
@@ -224,8 +221,8 @@ def admin_logout_single_session(user_id, session_id):
 GET /admin/user-roles
 '''
 @admin_bp.route("/user-roles", methods=["GET"])
-@protected("RBAC_MANAGE")
-@audit("USER_ROLE_LIST", "USER_ROLE", "LIST")
+@protected("LIST_CLIENT_ROLE_MAPPING")
+@audit("USER_ROLE_LISTED", "USER-ROLE", "LIST")
 def list_user_roles():
     mappings = ClientRoleMapping.query.all()
 
@@ -255,8 +252,8 @@ def list_user_roles():
 GET /admin/users/<id>/roles
 '''
 @admin_bp.route("/users/<uuid:user_id>/roles", methods=["GET"])
-@protected("RBAC_MANAGE")
-@audit("USER_ROLE_VIEW", "USER_ROLE", "VIEW")
+@protected("VIEW_CLIENT_ROLE_MAPPING")
+@audit("USER_ROLE_VIEWED", "USER-ROLE", "VIEW")
 def get_user_roles(user_id):
 
     mappings = ClientRoleMapping.query.filter_by(
@@ -285,8 +282,8 @@ def get_user_roles(user_id):
 POST /admin/users/<id>/roles
 '''
 @admin_bp.route("/users/<uuid:user_id>/roles", methods=["POST"])
-@protected("RBAC_MANAGE")
-@audit(RBAC_ROLE_ACL_ASSIGNED, "USER_ROLE", "ASSIGN")
+@protected("CREATE_CLIENT_ROLE_MAPPING")
+@audit("USER_ROLE_ASSIGNED", "USER-ROLE", "ASSIGN")
 def assign_role_to_user(user_id):
 
     data = request.get_json()
@@ -336,8 +333,8 @@ def assign_role_to_user(user_id):
 PUT /admin/users/<id>/roles/<role_id>
 '''
 @admin_bp.route("/users/<uuid:user_id>/roles/<uuid:role_id>", methods=["PUT"])
-@protected("RBAC_MANAGE")
-@audit("USER_ROLE_UPDATED", "USER_ROLE", "UPDATE")
+@protected("UPDATE_CLIENT_ROLE_MAPPING")
+@audit("USER_ROLE_UPDATED", "USER-ROLE", "UPDATE")
 def update_user_role(user_id, role_id):
 
     data = request.get_json()
@@ -366,8 +363,8 @@ def update_user_role(user_id, role_id):
 DELETE /admin/users/<id>/roles/<role_id>
 '''
 @admin_bp.route("/users/<uuid:user_id>/roles/<uuid:role_id>", methods=["DELETE"])
-@protected("RBAC_MANAGE")
-@audit(ROLE_REMOVED, "USER_ROLE", "REMOVE")
+@protected("DELETE_CLIENT_ROLE_MAPPING")
+@audit("USER_ROLE_DELETE", "USER-ROLE", "REMOVE")
 def remove_role_from_user(user_id, role_id):
 
     mapping = ClientRoleMapping.query.filter_by(
