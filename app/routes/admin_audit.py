@@ -16,7 +16,7 @@ Get logs
 GET /admin/audit-logs?page=1&limit=20
 '''
 @admin_audit_bp.route("", methods=["GET"])
-@protected("USER_READ")   # or ADMIN_READ later
+@protected("ADMIN_DASHBOARD_AUDIT")   # or ADMIN_READ later
 def list_audit_logs():
     try:
         query = AuditLog.query
@@ -83,7 +83,7 @@ Filter by event
 GET /admin/audit-logs?event_type=ACCESS_DENIED
 '''
 @admin_audit_bp.route("/<log_id>", methods=["GET"])
-@protected("USER_READ")
+@protected("ADMIN_DASHBOARD_AUDIT")
 def get_audit_log(log_id):
     try:
         log = AuditLog.query.get(uuid.UUID(log_id))
@@ -114,7 +114,7 @@ Delete logs older than 90 days
 DELETE /admin/audit-logs?days=90
 '''
 @admin_audit_bp.route("", methods=["DELETE"])
-@protected("SUPER_ADMIN")
+@protected("ADMIN_DASHBOARD_AUDIT")
 def purge_old_logs():
     try:
         days = int(request.args.get("days", 30))

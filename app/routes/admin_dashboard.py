@@ -33,8 +33,8 @@ admin_dashboard_bp = Blueprint(
 @admin_dashboard_bp.route("/user-growth", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "USER_GROWTH")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_VIEW", "DASHBOARD", "USER-GROWTH")
 def user_growth():
     today = datetime.utcnow()
     one_year_ago = today - timedelta(days=365)
@@ -60,7 +60,14 @@ def user_growth():
     return success_response(data=data)
 
 
+# =========================================================
+# DASHBOARD SUMMARY 
+# =========================================================
+@admin_dashboard_bp.route("/user-growth", methods=["GET"])
 @limiter.limit("30/minute")
+@jwt_required()
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_SUMMARY_VIEWED", "DASHBOARD", "VIEWED")
 def get_dashboard_summary():
     result = db.session.query(
         func.count(UserSession.id).label("total_users"),
@@ -82,8 +89,8 @@ def get_dashboard_summary():
 @admin_dashboard_bp.route("/role-distribution", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "ROLE_DISTRIBUTION")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_VIEW", "DASHBOARD", "ROLE_DISTRIBUTION")
 def role_distribution():
     results = (
         db.session.query(
@@ -112,8 +119,8 @@ def role_distribution():
 @admin_dashboard_bp.route("/acl-usage", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "ACL_USAGE")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_VIEW", "DASHBOARD", "ACL-USAGE")
 def acl_usage():
     results = (
         db.session.query(
@@ -142,8 +149,8 @@ def acl_usage():
 @admin_dashboard_bp.route("/audit-activity", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "AUDIT_ACTIVITY")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_AUDIT_STATS_VIEWED", "DASHBOARD", "AUDIT-ACTIVITY")
 def audit_activity():
     last_week = datetime.utcnow() - timedelta(days=7)
 
@@ -172,8 +179,8 @@ def audit_activity():
 @admin_dashboard_bp.route("/summary", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "SUMMARY")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_SUMMARY_VIEWED", "DASHBOARD", "SUMMARY")
 def dashboard_summary():
     today = datetime.utcnow().date()
 
@@ -213,8 +220,8 @@ def dashboard_summary():
 @admin_dashboard_bp.route("/recent-activity", methods=["GET"])
 @limiter.limit("30/minute")
 @jwt_required()
-@protected("ADMIN_DASHBOARD")
-@audit(DASHBOARD_VIEW, "DASHBOARD", "RECENT_ACTIVITY")
+@protected("ADMIN_DASHBOARD1")
+@audit("DASHBOARD_VIEW", "DASHBOARD", "RECENT_ACTIVITY")
 def recent_activity():
     logs = (
         AuditLog.query
